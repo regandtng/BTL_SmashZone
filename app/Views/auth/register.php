@@ -12,15 +12,15 @@
         <form action="<?= BASE_URL ?>/register" method="POST">
             <div class="form-group">
                 <label class="form-label">Họ và tên</label>
-                <input type="text" name="name" class="form-control" placeholder="Nguyễn Văn A" required>
+                <input type="text" name="name" class="form-control" placeholder="Họ và tên" required>
             </div>
             <div class="form-group">
                 <label class="form-label">Email</label>
-                <input type="email" name="email" class="form-control" placeholder="email@example.com" required>
+                <input type="email" name="email" class="form-control" placeholder="Email" required>
             </div>
             <div class="form-group">
                 <label class="form-label">Số điện thoại</label>
-                <input type="tel" name="phone" class="form-control" placeholder="09xx xxx xxx" required>
+                <input type="tel" name="phone" class="form-control" placeholder="Số điện thoại" required>
             </div>
             <div class="form-group">
                 <label class="form-label">Mật khẩu</label>
