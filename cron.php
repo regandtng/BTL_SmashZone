@@ -47,6 +47,7 @@ try {
             SET status = 'completed', completed_at = NOW() 
             WHERE status = 'confirmed' 
             AND CONCAT(booking_date, ' ', end_time) < NOW()
+            AND completed_at IS NULL
         ");
         $stmt->execute();
         $count = $stmt->rowCount();
