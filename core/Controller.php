@@ -65,4 +65,14 @@ class Controller
         }
         return true;
     }
+
+    protected function csrfProtect()
+    {
+        $token = $_POST['csrf_token'] ?? '';
+        if (!Session::validateCsrfToken($token)) {
+            Session::flash('error', 'Yêu cầu không hợp lệ (CSRF token sai hoặc hết hạn). Vui lòng thử lại.');
+            $this->redirect($_SERVER['HTTP_REFERER'] ?? '/');
+        }
+        return true;
+    }
 }
