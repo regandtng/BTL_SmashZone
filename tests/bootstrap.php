@@ -19,6 +19,10 @@ if (file_exists($dotenvPath)) {
     }
 }
 
+// Never let tests write to the application database configured in .env.
+$_ENV['DB_DATABASE'] = TEST_DB;
+putenv('DB_DATABASE=' . TEST_DB);
+
 // Require core classes
 require_once ROOT . '/core/Database.php';
 require_once ROOT . '/core/Model.php';
@@ -35,4 +39,4 @@ use App\Models\PricingRule;
 
 echo "=== SmashZone Test Bootstrap ===\n";
 echo "Database host: " . ($_ENV['DB_HOST'] ?? 'localhost') . "\n";
-echo "Database name: " . ($_ENV['DB_DATABASE'] ?? 'badminton_booking') . "\n\n";
+echo "Database name: " . TEST_DB . "\n\n";

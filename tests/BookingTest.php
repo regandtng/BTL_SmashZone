@@ -46,6 +46,56 @@ if ($insertOk) {
 $resultAfter = $booking->isSlotAvailable(1, '2026-11-05', 11, 13);
 test('isSlotAvailable trả về true khi khung giờ không chồng lấn', $resultAfter === true);
 
+// Test pending booking expiry is calculated using the database clock.
+$pendingBookingCode = 'TEST-PENDING-EXP-001';
+$db->query("DELETE FROM bookings WHERE booking_code = ?", [$pendingBookingCode]);
+try {
+    $pendingBookingId = $booking->createPending([
+        'booking_code'   => $pendingBookingCode,
+        'user_id'        => null,
+        'customer_name'  => 'Test Pending Expiry',
+        'customer_phone' => '0900000000',
+        'court_id'       => 1,
+        'branch_id'      => 1,
+        'booking_date'   => '2099-12-02',
+        'start_time'     => '09:00:00',
+        'end_time'       => '10:00:00',
+        'duration_hours' => 1,
+        'total_price'    => 150000,
+        'status'         => 'pending',
+        'notes'          => null,
+    ]);
+
+    $remainingSeconds = $booking->getPendingSecondsRemaining($pendingBookingId);
+    test('booking mới tạo có thời hạn gần đủ 3 phút theo giờ MySQL', $remainingSeconds >= 175 && $remainingSeconds <= 180);
+} finally {
+    $db->query("DELETE FROM bookings WHERE booking_code = ?", [$pendingBookingCode]);
+}
+
+// Test expired pending bookings are cancelled and no longer reserve their slots.
+$expiredBookingCode = 'TEST-EXPIRED-001';
+$expiredBookingDate = '2099-12-01';
+$db->query("DELETE FROM bookings WHERE booking_code = ?", [$expiredBookingCode]);
+try {
+    $db->query(
+        "INSERT INTO bookings (booking_code, user_id, customer_name, customer_phone, court_id, branch_id, booking_date, start_time, end_time, duration_hours, total_price, status, expires_at)
+         VALUES (?, NULL, 'Test Expired', '0900000000', 1, 1, ?, '09:00:00', '11:00:00', 2.0, 300000, 'pending', DATE_SUB(NOW(), INTERVAL 1 MINUTE))",
+        [$expiredBookingCode, $expiredBookingDate]
+    );
+
+    $availableAfterExpiry = $booking->isSlotAvailable(1, $expiredBookingDate, 9, 11);
+    $expiredSlots = $booking->getBookedSlots(1, $expiredBookingDate);
+    $expiredBooking = $db->query(
+        "SELECT status FROM bookings WHERE booking_code = ?",
+        [$expiredBookingCode]
+    )->fetch(\PDO::FETCH_ASSOC);
+
+    test('booking pending hết hạn được hủy và không còn khóa khung giờ', $availableAfterExpiry && !in_array(9, $expiredSlots, true));
+    test('trạng thái booking hết hạn được lưu là cancelled', $expiredBooking['status'] === 'cancelled');
+} finally {
+    $db->query("DELETE FROM bookings WHERE booking_code = ?", [$expiredBookingCode]);
+}
+
 // Test 2: generateBookingCode có định dạng BB-YYYYMMDD-XXXXX
 $code = $booking->generateBookingCode();
 $pattern = '/^BB-\d{8}-[A-Z0-9]{5}$/';

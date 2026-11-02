@@ -29,6 +29,8 @@ SmashZone/
 ├── public/             # Tài nguyên tĩnh (CSS, JS, ảnh)
 ├── tests/              # Unit test (BookingTest, PricingRuleTest) + E2E (Playwright)
 ├── cron.php            # Script chạy định kỳ (auto-complete, clean pending)
+├── .github/
+│   └── skills/          # Copilot Skills riêng cho frontend, backend và testing
 ├── .htaccess           # Cấu hình Apache
 ├── .gitignore
 ├── .cursorrules        # Quy tắc bắt buộc AI khi sinh code
@@ -53,7 +55,7 @@ SmashZone/
 ```
 
 ## Yêu cầu hệ thống
-- PHP 7.4+ (khuyên dùng PHP 8.x)
+- PHP 8.0+ (Docker sử dụng PHP 8.2)
 - MySQL 5.7+ / MariaDB 10.x
 - Apache (XAMPP, WAMP, hoặc Linux)
 - Docker (tùy chọn, qua `docker-compose.yml`)
@@ -143,10 +145,19 @@ php cron.php --all
 ```
 
 ## Unit Test
+Các bài test dùng database riêng `badminton_booking_test`, không dùng database ứng dụng. Tạo database test và import schema vào database này trước khi chạy:
+
+```bash
+mysql -u root -p -e "CREATE DATABASE badminton_booking_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
+mysql -u root -p badminton_booking_test < database/schema.sql
+```
+
+`tests/bootstrap.php` lấy host/tài khoản từ `.env` nhưng ép tên database sang `badminton_booking_test`. Không cấu hình database test trỏ đến production hoặc database dùng chung.
+
 ```bash
 php tests/run_tests.php
 ```
-Kết quả: 7/7 passed (BookingTest 3/3, PricingRuleTest 4/4).
+Các bài test có thể tạo và xóa dữ liệu mẫu trong database test.
 
 ## Đóng góp
 1. Tạo nhánh `feature/ten-tinh-nang` từ `main`

@@ -8,12 +8,14 @@ class Booking extends Model {
     protected $table = 'bookings';
 
     public function findByUser($userId) {
+        $this->cleanExpiredPending();
         $stmt = $this->db->prepare($this->historySelect() . " WHERE b.user_id = ? ORDER BY b.created_at DESC");
         $stmt->execute([$userId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     public function findByPhone($phone) {
+        $this->cleanExpiredPending();
         $stmt = $this->db->prepare($this->historySelect() . " WHERE b.customer_phone = ? ORDER BY b.created_at DESC");
         $stmt->execute([$phone]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -32,6 +34,7 @@ class Booking extends Model {
     }
 
     public function findDetailed($id) {
+        $this->cleanExpiredPending();
         $stmt = $this->db->prepare($this->historySelect() . " WHERE b.id = ? LIMIT 1");
         $stmt->execute([$id]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
@@ -55,12 +58,40 @@ class Booking extends Model {
         return "BB-{$dateStr}-{$randomStr}";
     }
 
+    public function createPending(array $data) {
+        $columns = array_keys($data);
+        $columns[] = 'expires_at';
+
+        $placeholders = array_fill(0, count($data), '?');
+        $placeholders[] = 'DATE_ADD(NOW(), INTERVAL 3 MINUTE)';
+
+        $sql = "INSERT INTO {$this->table} (" . implode(', ', $columns) . ")
+                VALUES (" . implode(', ', $placeholders) . ")";
+
+        $this->db->query($sql, array_values($data));
+        return $this->db->lastInsertId();
+    }
+
+    public function getPendingSecondsRemaining($bookingId): int {
+        $stmt = $this->db->prepare("
+            SELECT GREATEST(0, TIMESTAMPDIFF(SECOND, NOW(), expires_at)) AS remaining_seconds
+            FROM {$this->table}
+            WHERE id = ? AND status = 'pending' AND expires_at IS NOT NULL
+        ");
+        $stmt->execute([$bookingId]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        return max(0, (int)($row['remaining_seconds'] ?? 0));
+    }
+
     public function isSlotAvailable($courtId, $date, $startTime, $endTime) {
+        $this->cleanExpiredPending();
         $startTimeStr = sprintf('%02d:00:00', $startTime);
         $endTimeStr   = sprintf('%02d:00:00', $endTime);
         $stmt = $this->db->prepare("
             SELECT COUNT(*) as cnt FROM {$this->table} 
             WHERE court_id = ? AND booking_date = ? AND status IN ('confirmed', 'pending')
+            AND (status = 'confirmed' OR expires_at IS NULL OR expires_at > NOW())
             AND ((start_time < ? AND end_time > ?) OR (start_time >= ? AND start_time < ?))
         ");
         $stmt->execute([
@@ -75,10 +106,12 @@ class Booking extends Model {
      * Excludes expired pending bookings.
      */
     public function getBookedSlots($courtId, $date) {
+        $this->cleanExpiredPending();
         $stmt = $this->db->prepare("
             SELECT start_time, end_time FROM {$this->table}
             WHERE court_id = ? AND booking_date = ? 
             AND status IN ('confirmed', 'pending')
+            AND (status = 'confirmed' OR expires_at IS NULL OR expires_at > NOW())
         ");
         $stmt->execute([$courtId, $date]);
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -95,6 +128,7 @@ class Booking extends Model {
     }
 
     public function getByBranch($branchId, $date = null) {
+        $this->cleanExpiredPending();
         $sql = "SELECT * FROM {$this->table} WHERE branch_id = ?";
         $params = [$branchId];
         if ($date) {
@@ -108,6 +142,7 @@ class Booking extends Model {
     }
 
     public function getAll($filters = []) {
+        $this->cleanExpiredPending();
         $sql = "SELECT * FROM {$this->table} WHERE 1=1";
         $params = [];
         
@@ -167,10 +202,49 @@ class Booking extends Model {
             SET status = 'cancelled',
                 notes = CONCAT(COALESCE(notes, ''), ' | Auto cancel: quá hạn thanh toán')
             WHERE status = 'pending' 
-            AND expires_at IS NOT NULL 
-            AND expires_at < NOW()
+            AND (expires_at IS NULL OR expires_at <= NOW())
         ");
-        $stmt->execute();
+            $stmt->execute();
         return $stmt->rowCount();
+    }
+
+    /**
+     * Lấy thống kê dashboard cho danh sách chi nhánh (1 query GROUP BY, tránh N+1).
+     * Trả về mảng keyed by branch_id: ['total_bookings'=>n, 'total_revenue'=>float, 'today_bookings'=>n]
+     */
+    public function getDashboardStats(array $branchIds): array
+    {
+        if (empty($branchIds)) {
+            return [];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($branchIds), '?'));
+        $today = date('Y-m-d');
+
+        $sql = "
+            SELECT 
+                branch_id,
+                COUNT(*) as total_bookings,
+                COALESCE(SUM(CASE WHEN status = 'confirmed' THEN total_price ELSE 0 END), 0) as total_revenue,
+                COALESCE(SUM(CASE WHEN booking_date = ? AND status = 'confirmed' THEN 1 ELSE 0 END), 0) as today_bookings
+            FROM {$this->table}
+            WHERE branch_id IN ({$placeholders})
+            GROUP BY branch_id
+        ";
+
+        $params = array_merge([$today], $branchIds);
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $stats = [];
+        foreach ($rows as $row) {
+            $stats[(int)$row['branch_id']] = [
+                'total_bookings' => (int)$row['total_bookings'],
+                'total_revenue'  => (float)$row['total_revenue'],
+                'today_bookings' => (int)$row['today_bookings'],
+            ];
+        }
+        return $stats;
     }
 }
