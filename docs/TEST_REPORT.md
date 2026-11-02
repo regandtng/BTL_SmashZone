@@ -49,21 +49,49 @@ BASE_URL=http://localhost/BTL_SmashZone npx playwright test
 
 ## 3. Báo cáo Coverage (Kết quả thực)
 
-Chạy toàn bộ unit test qua `tests/run_tests.php`:
+Chạy toàn bộ unit test qua `tests/run_tests.php` (môi trường XAMPP PHP 8.2, MySQL có dữ liệu mẫu từ `schema.sql`):
+
+**Kết quả đầu ra thực tế:**
+```
+=== SmashZone Test Runner ===
+
+>> Chạy BookingTest
+--- BookingTest ---
+  [PASS] isSlotAvailable trả về true cho sân không có booking
+  [PASS] generateBookingCode đúng định dạng BB-YYYYMMDD-XXXXX
+  [PASS] generateBookingCode tạo mã duy nhất (không trùng)
+Kết quả: 3 passed, 0 failed
+
+>> Chạy PricingRuleTest
+--- PricingRuleTest ---
+  [PASS] Pricing weekday off-peak 2 giờ = 160000
+  [PASS] Pricing weekday peak tối 2 giờ = 300000
+  [PASS] Pricing weekend 2 giờ = 360000
+  [PASS] Pricing trả về giá dương
+Kết quả: 4 passed, 0 failed
+
+========================================
+Tổng kết
+========================================
+Tổng passed: 7
+Tổng failed: 0
+Thời gian chạy: ~359ms
+========================================
+```
 
 | Chỉ số | Giá trị |
 |--------|---------|
 | Tổng test case | 7 |
 | Passed | 7 |
 | Failed | 0 |
-| Thời gian chạy | ~350ms |
+| Thời gian chạy | ~359ms |
 
-Các method đã kiểm thử:
-- `Booking::isSlotAvailable()` — 3 test case
-- `Booking::generateBookingCode()` — 2 test case (định dạng + duy nhất)
+Chi tiết method đã kiểm thử:
+- `Booking::isSlotAvailable()` — 1 test case (trả về true khi sân trống)
+- `Booking::generateBookingCode()` — 2 test case (định dạng BB-YYYYMMDD-XXXXX + tính duy nhất)
 - `PricingRule::getPrice()` — 4 test case (weekday off-peak, weekday peak, weekend, giá dương)
 
-Để có báo cáo coverage chi tiết từng dòng code, cài **Xdebug** và chạy:
+**Lưu ý coverage:** Đây là số test case passed, chưa phải phần trăm dòng code được bao phủ. Để có line coverage chính xác, cài **Xdebug** và chạy:
 ```bash
 php -d xdebug.mode=coverage tests/run_tests.php
 ```
@@ -89,7 +117,7 @@ Sau đó phân tích file coverage XML/HTML từ Xdebug.
 - `OwnerController::dashboard` lặp qua mỗi branch để COUNT bookings → N+1. Cần gộp vào 1 query với GROUP BY.
 
 ## 5. Kết luận
-- Unit test: đã viết cho 2 model quan trọng (Booking, PricingRule), tổng 7 test case,全部 passed.
+- Unit test: đã viết cho 2 model quan trọng (Booking, PricingRule), tổng 7 test case, 7 passed, 0 failed.
 - E2E: đã viết kịch bản Playwright cho luồng đặt sân chính.
 - Bảo mật: đã xác định 10 mục OWASP, xử lý một phần (prepared statements, bcrypt, CSRF, session_regenerate_id), còn cần kiểm tra lại `Model::findBy()` (tên cột động) và N+1 query trong `OwnerController::dashboard`.
 - N+1: điểm lưu ý trong `OwnerController::dashboard` (lặp COUNT bookings cho mỗi branch).

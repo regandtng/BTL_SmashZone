@@ -9,7 +9,6 @@ Tất cả tài liệu thiết kế, báo cáo, hướng dẫn demo và phản b
 | `GIT_WORKFLOW.md` | Chiến lược nhánh, Pull Request, branch protection |
 | `TEST_REPORT.md` | Unit test, E2E Playwright, báo cáo coverage, OWASP, N+1 |
 | `OWASP_CHECKLIST.md` | Checklist bảo mật OWASP Top 10 |
-| `SLIDE_OUTLINE.md` | Nội dung slide bảo vệ (10-12 trang) |
 | `DEMO_SCRIPT.md` | Kịch bản live demo từng bước |
 | `BACKUP_VIDEO_PLAN.md` | Kế hoạch quay video dự phòng |
 | `DEFENSE_QA.md` | Câu hỏi phản biện & câu trả lời chuẩn |

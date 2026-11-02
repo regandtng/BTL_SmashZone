@@ -50,7 +50,7 @@
                         <td><?= htmlspecialchars($r['label'] ?? '') ?></td>
                         <td style="text-align:center;">
                             <?php if ($is_super || !$r['branch_id']): ?>
-                                <a href="#" class="btn btn-outline-accent btn-sm" onclick="editPricing(<?= (int)($r['id']) ?>, '<?= htmlspecialchars($r['day_type']) ?>', '<?= htmlspecialchars($r['start_hour']) ?>', '<?= htmlspecialchars($r['end_hour']) ?>', <?= (float)($r['price_per_hour']) ?>, '<?= htmlspecialchars($r['label']) ?>')">Sửa</a>
+                                <button class="btn btn-outline-accent btn-sm" type="button" onclick="openEditPricingModal(<?= (int)($r['id']) ?>, '<?= htmlspecialchars($r['day_type'], ENT_QUOTES) ?>', '<?= htmlspecialchars($r['start_hour']) ?>', '<?= htmlspecialchars($r['end_hour']) ?>', <?= (float)($r['price_per_hour']) ?>, '<?= htmlspecialchars($r['label'], ENT_QUOTES) ?>')">Sửa</button>
                                 <form action="<?= BASE_URL ?>/owner/pricing/delete" method="POST" style="display:inline;" onsubmit="return confirm('Xóa quy giá này?')">
                                     <?= \Core\Session::csrfField() ?>
                                     <input type="hidden" name="id" value="<?= (int)($r['id']) ?>">
@@ -114,6 +114,54 @@
             </form>
         </div>
     </div>
+
+    <div id="editPricingModal" class="modal" style="display:none;">
+        <div class="modal-overlay" onclick="this.parentElement.style.display='none'"></div>
+        <div class="modal-content glass-panel p-4" style="max-width:520px; border-radius:12px;">
+            <h3 class="m-0 mb-3" style="font-size:1.1rem; font-weight:600;">Sửa Quy Giá</h3>
+            <form action="<?= BASE_URL ?>/owner/pricing/update" method="POST">
+                <?= \Core\Session::csrfField() ?>
+                <input type="hidden" name="id" id="editPricingId">
+                <div class="form-group mb-3">
+                    <label class="form-label">Chi nhánh (để trống = toàn hệ thống)</label>
+                    <select name="branch_id" id="editPricingBranchId" class="form-control">
+                        <option value="">Toàn hệ thống</option>
+                        <?php foreach ($branches as $b): ?>
+                            <option value="<?= (int)($b['id']) ?>"><?= htmlspecialchars($b['name']) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="form-group mb-3">
+                    <label class="form-label">Loại ngày</label>
+                    <select name="day_type" id="editPricingDayType" class="form-control">
+                        <option value="weekday">Thứ 2 - Thứ 6</option>
+                        <option value="weekend">Thứ 7 - Chủ Nhật</option>
+                        <option value="all">Tất cả ngày</option>
+                    </select>
+                </div>
+                <div class="form-group mb-3">
+                    <label class="form-label">Giờ bắt đầu</label>
+                    <input type="time" name="start_hour" id="editPricingStartHour" class="form-control" required>
+                </div>
+                <div class="form-group mb-3">
+                    <label class="form-label">Giờ kết thúc</label>
+                    <input type="time" name="end_hour" id="editPricingEndHour" class="form-control" required>
+                </div>
+                <div class="form-group mb-3">
+                    <label class="form-label">Giá mỗi giờ (đ)</label>
+                    <input type="number" name="price_per_hour" id="editPricingPrice" class="form-control" required min="0">
+                </div>
+                <div class="form-group mb-3">
+                    <label class="form-label">Nhãn</label>
+                    <input type="text" name="label" id="editPricingLabel" class="form-control" placeholder="Ví dụ: Peak Tối">
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-outline-accent btn-sm" onclick="document.getElementById('editPricingModal').style.display='none'">Hủy</button>
+                    <button type="submit" class="btn btn-accent btn-sm">Lưu</button>
+                </div>
+            </form>
+        </div>
+    </div>
 <?php endif; ?>
 
 <style>
@@ -146,9 +194,15 @@
 </style>
 
 <script>
-function editPricing(id, dayType, startHour, endHour, price, label) {
-    // TODO: connect to edit form
-    alert('Chức năng sửa chưa triển khai giao diện. Vui lòng xóa và tạo lại.');
+function openEditPricingModal(id, dayType, startHour, endHour, price, label) {
+    document.getElementById('editPricingId').value = id;
+    document.getElementById('editPricingBranchId').value = '';
+    document.getElementById('editPricingDayType').value = dayType;
+    document.getElementById('editPricingStartHour').value = startHour;
+    document.getElementById('editPricingEndHour').value = endHour;
+    document.getElementById('editPricingPrice').value = price;
+    document.getElementById('editPricingLabel').value = label;
+    document.getElementById('editPricingModal').style.display = 'block';
 }
 </script>
 

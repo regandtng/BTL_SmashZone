@@ -8,7 +8,7 @@
 ## 2. Broken Access Control (Phân quyền)
 - [x] `OwnerController::requireOwner()` — chặn truy cập nếu không phải owner
 - [x] `OwnerController::requireBranchAccess()` — owner chỉ xem chi nhánh mình sở hữu
-- [ ] Kiểm tra `BookingController::history` — cho phép tìm theo số điện thoại (có thể rò rẫy dữ liệu người khác)
+- [ ] Kiểm tra `BookingController::history` — cho phép tìm theo số điện thoại (có thể rò rỉ dữ liệu người khác)
 - [ ] Kiểm tra `PaymentController::show` — không kiểm tra xem booking có thuộc về user hiện tại không
 
 ## 3. CSRF (Cross-Site Request Forgery)

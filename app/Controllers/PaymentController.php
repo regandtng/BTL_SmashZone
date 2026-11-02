@@ -21,6 +21,12 @@ class PaymentController extends Controller
             $this->redirect('/');
         }
 
+        // Kiểm tra quyền sở hữu: user đăng nhập chỉ xem được đơn của mình
+        if (Session::has('user_id') && (int)($booking['user_id'] ?? 0) !== (int)Session::get('user_id')) {
+            Session::flash('error', 'Bạn không có quyền xem đơn đặt sân này.');
+            $this->redirect('/booking/history');
+        }
+
         if ($booking['status'] === 'confirmed') {
             $this->redirect("/booking/success/{$bookingId}");
         }

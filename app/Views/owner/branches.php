@@ -26,20 +26,32 @@
             </thead>
             <tbody>
                 <?php foreach ($branches as $branch): ?>
+                    <?php
+                    $_bid = (int)($branch['id']);
+                    $_bname = addslashes(htmlspecialchars($branch['name'] ?? ''));
+                    $_baddr = addslashes(htmlspecialchars($branch['address'] ?? ''));
+                    $_bcity = addslashes(htmlspecialchars($branch['city'] ?? ''));
+                    $_bphone = addslashes(htmlspecialchars($branch['phone'] ?? ''));
+                    $_bcourts = (int)($branch['courts_count'] ?? 0);
+                    $_bopen = addslashes(htmlspecialchars($branch['open_time'] ?? '05:00'));
+                    $_bclose = addslashes(htmlspecialchars($branch['close_time'] ?? '22:00'));
+                    $_bactive = ($branch['is_active'] ?? 1) ? 'true' : 'false';
+                    ?>
                     <tr>
                         <td style="font-weight:600;"><?= htmlspecialchars($branch['name'] ?? '') ?></td>
                         <td><?= htmlspecialchars($branch['address'] ?? '') ?></td>
                         <td><?= htmlspecialchars($branch['city'] ?? '') ?></td>
-                        <td><?= (int)($branch['courts_count'] ?? 0) ?></td>
+                        <td><?= $_bcourts ?></td>
                         <td>
                             <span class="badge <?= ($branch['is_active'] ?? 1) ? 'badge-success' : 'badge-danger' ?>">
                                 <?= ($branch['is_active'] ?? 1) ? 'Hoạt Động' : 'Bảo Trì' ?>
                             </span>
                         </td>
                         <td style="text-align:right;">
-                            <a href="<?= BASE_URL ?>/owner/bookings?branch_id=<?= (int)($branch['id']) ?>" class="btn btn-outline-accent btn-sm">Xem Đặt Sân</a>
+                            <a href="<?= BASE_URL ?>/owner/bookings?branch_id=<?= $_bid ?>" class="btn btn-outline-accent btn-sm">Xem Đặt Sân</a>
                             <?php if ($is_super): ?>
-                                <button class="btn btn-danger btn-sm ml-2" onclick="confirmDeleteBranch(<?= (int)($branch['id']) ?>, '<?= htmlspecialchars($branch['name']) ?>')">Xóa</button>
+                                <button class="btn btn-outline-accent btn-sm ml-1" onclick="openEditBranchModal(<?= $_bid ?>, '<?= $_bname ?>', '<?= $_baddr ?>', '<?= $_bcity ?>', '<?= $_bphone ?>', <?= $_bcourts ?>, '<?= $_bopen ?>', '<?= $_bclose ?>', <?= $_bactive ?>)">Sửa</button>
+                                <button class="btn btn-danger btn-sm ml-2" onclick="confirmDeleteBranch(<?= $_bid ?>, '<?= htmlspecialchars($branch['name']) ?>')">Xóa</button>
                             <?php endif; ?>
                         </td>
                     </tr>
@@ -95,9 +107,54 @@
             </form>
         </div>
     </div>
-<?php endif; ?>
 
-<?php if ($is_super): ?>
+    <div id="editBranchModal" class="modal" style="display:none;">
+        <div class="modal-overlay" onclick="this.parentElement.style.display='none'"></div>
+        <div class="modal-content glass-panel p-4" style="max-width:500px; border-radius:12px;">
+            <h3 class="m-0 mb-3" style="font-size:1.1rem; font-weight:600;">Sửa Chi Nhánh</h3>
+            <form action="<?= BASE_URL ?>/owner/branch/update" method="POST">
+                <?= \Core\Session::csrfField() ?>
+                <input type="hidden" name="branch_id" id="editBranchId">
+                <div class="form-group mb-3">
+                    <label class="form-label">Tên chi nhánh</label>
+                    <input type="text" name="name" id="editBranchName" class="form-control" required>
+                </div>
+                <div class="form-group mb-3">
+                    <label class="form-label">Địa chỉ</label>
+                    <input type="text" name="address" id="editBranchAddress" class="form-control" required>
+                </div>
+                <div class="form-group mb-3">
+                    <label class="form-label">Thành phố</label>
+                    <input type="text" name="city" id="editBranchCity" class="form-control" required>
+                </div>
+                <div class="form-group mb-3">
+                    <label class="form-label">Số điện thoại</label>
+                    <input type="text" name="phone" id="editBranchPhone" class="form-control">
+                </div>
+                <div class="form-group mb-3">
+                    <label class="form-label">Số sân</label>
+                    <input type="number" name="courts_count" id="editBranchCourts" class="form-control" min="1" required>
+                </div>
+                <div class="form-group mb-3">
+                    <label class="form-label">Giờ mở cửa</label>
+                    <input type="time" name="open_time" id="editBranchOpenTime" class="form-control">
+                </div>
+                <div class="form-group mb-3">
+                    <label class="form-label">Giờ đóng cửa</label>
+                    <input type="time" name="close_time" id="editBranchCloseTime" class="form-control">
+                </div>
+                <div class="form-group mb-3 form-check">
+                    <input type="checkbox" name="is_active" id="editBranchIsActive" class="form-check-input">
+                    <label class="form-check-label">Hoạt động</label>
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-outline-accent btn-sm" onclick="document.getElementById('editBranchModal').style.display='none'">Hủy</button>
+                    <button type="submit" class="btn btn-accent btn-sm">Lưu</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <form id="deleteBranchForm" action="<?= BASE_URL ?>/owner/branch/delete" method="POST" style="display:none;">
         <?= \Core\Session::csrfField() ?>
     </form>
@@ -142,6 +199,19 @@ function confirmDeleteBranch(id, name) {
         form.appendChild(input);
         form.submit();
     }
+}
+
+function openEditBranchModal(id, name, address, city, phone, courts, openTime, closeTime, isActive) {
+    document.getElementById('editBranchId').value = id;
+    document.getElementById('editBranchName').value = name;
+    document.getElementById('editBranchAddress').value = address;
+    document.getElementById('editBranchCity').value = city;
+    document.getElementById('editBranchPhone').value = phone;
+    document.getElementById('editBranchCourts').value = courts;
+    document.getElementById('editBranchOpenTime').value = openTime;
+    document.getElementById('editBranchCloseTime').value = closeTime;
+    document.getElementById('editBranchIsActive').checked = isActive === true || isActive === 'true' || isActive === 1;
+    document.getElementById('editBranchModal').style.display = 'block';
 }
 </script>
 
