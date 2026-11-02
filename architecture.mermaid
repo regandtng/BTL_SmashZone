@@ -1,0 +1,48 @@
+flowchart TD
+    Client[(Trình duyệt / Mobile Web)] <-->|HTTP/HTML| LB[Load Balancer / Reverse Proxy]
+    LB -->|PHP Request| WebServer[(Web Server - Apache/Nginx)]
+    
+    subgraph MVC_PHP["SmashZone PHP (MVC)"]
+        WebServer --> Router[Router.php]
+        Router --> Controller[Controllers]
+        Controller --> Model[Models]
+        Model --> DB[(MySQL Database)]
+        Controller --> View[Views / Templates]
+        View -->|HTML| Client
+    end
+    
+    subgraph Auth["Xác thực & Phân quyền"]
+        Controller --> Session[Session PHP]
+        Controller --> AuthC[AuthController]
+        AuthC -->|Verify password| Model
+        Model -->|owners / users| DB
+    end
+    
+    subgraph Booking["Luồng đặt sân"]
+        Controller --> BookingC[BookingController]
+        BookingC -->|Kiểm tra trùng giờ| Model
+        Model -->|bookings / courts| DB
+        BookingC -->|Tạo pending| Model
+        Model -->|expires_at| DB
+    end
+    
+    subgraph Payment["Thanh toán"]
+        Controller --> PaymentC[PaymentController]
+        PaymentC -->|Tạo payment| Model
+        Model -->|payments| DB
+        PaymentC -->|Cập nhật status| Model
+    end
+    
+    subgraph Owner["Quản trị Owner"]
+        Controller --> OwnerC[OwnerController]
+        OwnerC -->|Phân quyền owner_branches| Model
+        Model -->|owners / branches| DB
+    end
+    
+    subgraph Cron["Cron Job (background)"]
+        CronJob[cron.php] -->|--auto-complete / --clean-pending| DB
+    end
+    
+    style Client fill:#f9f,stroke:#333
+    style DB fill:#bbf,stroke:#333
+    style CronJob fill:#f96,stroke:#333

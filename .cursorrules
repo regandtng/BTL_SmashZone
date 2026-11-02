@@ -1,0 +1,75 @@
+# SmashZone AI Rules (.cursorrules)
+
+## 1. Mục tiêu
+Đảm bảo mọi đoạn code AI sinh ra tuân thủ cấu trúc MVC PHP thuần của SmashZone, ngăn chặn import vòng tròn, và duy nhất responsabilidad phân tầng rõ ràng.
+
+## 2. Cấu trúc thư mục (bắt buộc tuân thủ)
+```
+app/
+├── Controllers/    # Chỉ nhận request, gọi Service/Model, trả về View/JSON
+├── Models/         # Chỉ tương tác CSDL qua PDO, không chứa logic nghiệp vụ phức tạp
+├── Views/          # Chỉ hiển thị HTML, không chứa logic SQL
+core/
+├── Controller.php  # Lớp cơ sở Controller (render, redirect, json, auth)
+├── Model.php       # Lớp cơ sở Model (CRUD qua PDO)
+├── Database.php    # Singleton PDO wrapper
+├── Router.php      # Định tuyến URL
+└── Session.php     # Quản lý session, CSRF, flash
+config/
+├── database.php    # Cấu hình kết nối MySQL
+routes/
+├── web.php         # Định nghĩa route (Controller@method)
+database/
+├── schema.sql      # Sơ đồ CSDL (không hardcode tên DB)
+```
+
+## 3. Chiều luồng dependency (hướng đi xuống)
+```
+UI (Views) → Controllers → Models → Database (MySQL)
+```
+- **Controller** không được gọi trực tiếp View của controller khác.
+- **Model** không được gọi Controller.
+- Không được import ngược (circular dependency).
+- Tất cả truy vấn CSDL phải qua `Core\Database::getInstance()` và prepared statements.
+
+## 4. Quy tắc viết code (bắt buộc)
+- Sử dụng namespace `App\Controllers\*` và `App\Models\*`.
+- Controller phải extends `Core\Controller`.
+- Model phải extends `Core\Model`.
+- Tất cả input từ `$_POST`, `$_GET`, `$_REQUEST` phải được validate/sanitize trước khi sử dụng.
+- Sử dụng prepared statements cho mọi truy vấn SQL (chống SQL Injection).
+- Mật khẩu phải dùng `password_hash()` / `password_verify()`.
+- Thêm CSRF token vào mọi form POST.
+- Session phải được khởi tạo qua `Core\Session::start()`.
+- Flash message qua `Session::flash()` / `Session::getFlash()`.
+
+## 5. Quy tắc đặt tên
+- Class: `StudlyCase` (ví dụ: `BookingController`, `PricingRule`)
+- File: trùng tên class (ví dụ: `BookingController.php`)
+- Method: `camelCase` (ví dụ: `isSlotAvailable`, `generateBookingCode`)
+- Bảng CSDL: `snake_case` số nhiều (ví dụ: `bookings`, `pricing_rules`)
+- Cột CSDL: `snake_case` (ví dụ: `booking_code`, `expires_at`)
+
+## 6. Cách xử lý lỗi
+- Không dùng `die()` hoặc `echo` thô trong Controller/Model (trừ khi xử lý JSON API).
+- Dùng `Session::flash('error', ...)` và redirect để thông báo lỗi người dùng.
+- Ghi log lỗi hệ thống vào file hoặc stderr (không hiển thị stack trace ra view).
+
+## 7. API Contract (OpenAPI)
+- Mọi endpoint mới phải được cập nhật vào `openapi.yaml` tại gốc repo.
+- Route JSON API phải trả về `Content-Type: application/json` và mã trạng thái HTTP phù hợp.
+
+## 8. Cron Job
+- File `cron.php` chỉ chạy qua CLI, không cho phép truy cập qua HTTP.
+- Mọi thay đổi schema liên quan đến cron phải cập nhật đồng bộ `database/schema.sql`.
+
+## 9. Test
+- Unit test đặt trong `tests/*.php`, chạy bằng PHP thuần (không bắt buộc Composer).
+- E2E test đặt trong `tests/e2e/playwright/`.
+- Mọi thay đổi logic nghiệp vụ phải có test tương ứng.
+
+## 10. AI Assistant Behavior
+- Khi sinh code, phải nêu rõ file nào được tạo/sửa và lý do.
+- Không được tạo file mới ngoài cấu trúc thư mục trên trừ khi có lý do chính đáng.
+- Trước khi đề xuất sửa code, phải đọc file hiện tại để hiểu ngữ cảnh.
+- Nếu không chắc về cấu trúc DB, phải tham khảo `database/schema.sql`.

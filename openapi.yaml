@@ -1,0 +1,296 @@
+openapi: 3.0.3
+info:
+  title: SmashZone API
+  version: 1.0.0
+  description: API hệ thống đặt sân badminton online SmashZone (PHP thuần, MVC)
+servers:
+  - url: http://localhost/BTL_SmashZone
+    description: Local development (XAMPP)
+
+paths:
+  /:
+    get:
+      summary: Trang chủ SmashZone
+      operationId: homeIndex
+      responses:
+        '200':
+          content:
+            text/html:
+              schema:
+                type: string
+
+  /branches:
+    get:
+      summary: Danh sách chi nhánh
+      operationId: branchIndex
+      parameters:
+        - name: city
+          in: query
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          content:
+            text/html:
+              schema:
+                type: string
+
+  /branch/{id}:
+    get:
+      summary: Chi tiết chi nhánh và danh sách sân
+      operationId: branchShow
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          content:
+            text/html:
+              schema:
+                type: string
+        '404':
+          description: Chi nhánh không tồn tại
+
+  /booking/{courtId}:
+    get:
+      summary: Trang chọn khung giờ đặt sân
+      operationId: bookingCreate
+      parameters:
+        - in: path
+          name: courtId
+          required: true
+          schema:
+            type: integer
+        - in: query
+          name: date
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          content:
+            text/html:
+              schema:
+                type: string
+
+  /booking/store:
+    post:
+      summary: Tạo đặt sân pending
+      operationId: bookingStore
+      security:
+        - sessionAuth: []
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+                - court_id
+                - booking_date
+                - start_hour
+                - end_hour
+              properties:
+                court_id:
+                  type: integer
+                booking_date:
+                  type: string
+                  format: date
+                start_hour:
+                  type: integer
+                end_hour:
+                  type: integer
+      responses:
+        '302':
+          description: Redirect đến trang xác nhận
+        '400':
+          description: Dữ liệu không hợp lệ
+
+  /booking/confirm:
+    get:
+      summary: Xác nhận thông tin đặt sân
+      operationId: bookingConfirm
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          content:
+            text/html:
+              schema:
+                type: string
+
+    post:
+      summary: Xử lý xác nhận và tạo booking
+      operationId: bookingProcessConfirm
+      security:
+        - sessionAuth: []
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                customer_name:
+                  type: string
+                customer_phone:
+                  type: string
+                customer_email:
+                  type: string
+                notes:
+                  type: string
+      responses:
+        '302':
+          description: Redirect đến trang thanh toán
+
+  /api/available-slots:
+    get:
+      summary: API lấy khung giờ trống của sân
+      operationId: bookingAvailableSlots
+      parameters:
+        - in: query
+          name: court_id
+          required: true
+          schema:
+            type: integer
+        - in: query
+          name: date
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  slots:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        hour:
+                          type: integer
+                        label:
+                          type: string
+                        booked:
+                          type: boolean
+                  date:
+                    type: string
+                  court_id:
+                    type: integer
+        '400':
+          description: Thiếu court_id
+
+  /payment/{bookingId}:
+    get:
+      summary: Trang thanh toán
+      operationId: paymentShow
+      parameters:
+        - in: path
+          name: bookingId
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          content:
+            text/html:
+              schema:
+                type: string
+
+  /payment/process:
+    post:
+      summary: Xử lý thanh toán
+      operationId: paymentProcess
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+                - booking_id
+                - payment_method
+              properties:
+                booking_id:
+                  type: integer
+                payment_method:
+                  type: string
+                  enum: [qr, momo, cash]
+      responses:
+        '302':
+          description: Redirect đến trang thành công
+
+  /booking/history:
+    get:
+      summary: Lịch sử đặt sân
+      operationId: bookingHistory
+      security:
+        - sessionAuth: []
+      parameters:
+        - in: query
+          name: phone
+          schema:
+            type: string
+      responses:
+        '200':
+          content:
+            text/html:
+              schema:
+                type: string
+
+  /owner/login:
+    post:
+      summary: Đăng nhập quản trị owner
+      operationId: ownerLogin
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+                - username
+                - password
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '302':
+          description: Redirect đến dashboard owner
+
+  /owner/dashboard:
+    get:
+      summary: Dashboard quản trị
+      operationId: ownerDashboard
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          content:
+            text/html:
+              schema:
+                type: string
+
+components:
+  securitySchemes:
+    sessionAuth:
+      type: apiKey
+      in: cookie
+      name: PHPSESSID
+      description: Session cookie PHP
+
+tags:
+  - name: Public
+    description: Endpoint công khai (trang chủ, chi nhánh, đặt sân, thanh toán)
+  - name: Auth
+    description: Xác thực khách hàng và owner
+  - name: Owner
+    description: Quản trị chi nhánh, giá, doanh thu

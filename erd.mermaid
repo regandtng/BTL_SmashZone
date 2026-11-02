@@ -1,0 +1,99 @@
+erDiagram
+    USERS ||--o{ BOOKINGS : "đặt"
+    BRANCHES ||--o{ COURTS : "chứa"
+    BRANCHES ||--o{ BOOKINGS : "chi nhánh của"
+    COURTS ||--o{ BOOKINGS : "được đặt"
+    BOOKINGS ||--|| PAYMENTS : "thanh toán"
+    PRICING_RULES ||--o{ BRANCHES : "áp dụng cho"
+    OWNERS ||--o{ OWNER_BRANCHES : "quản lý"
+    BRANCHES ||--o{ OWNER_BRANCHES : "được quản lý"
+
+    USERS {
+        int id PK
+        string name
+        string phone
+        string email UK
+        string password
+        datetime created_at
+    }
+
+    BRANCHES {
+        int id PK
+        string name
+        string address
+        string city
+        string phone
+        text description
+        string image
+        time open_time
+        time close_time
+        int courts_count
+        boolean is_active
+        datetime created_at
+    }
+
+    COURTS {
+        int id PK
+        int branch_id FK
+        string name
+        enum status
+        datetime created_at
+    }
+
+    BOOKINGS {
+        int id PK
+        string booking_code UK
+        int user_id FK
+        string customer_name
+        string customer_phone
+        string customer_email
+        int court_id FK
+        int branch_id FK
+        date booking_date
+        time start_time
+        time end_time
+        decimal duration_hours
+        decimal total_price
+        enum status
+        datetime expires_at
+        text notes
+        datetime created_at
+        datetime completed_at
+    }
+
+    PAYMENTS {
+        int id PK
+        int booking_id FK
+        enum method
+        decimal amount
+        enum status
+        string transaction_id
+        datetime paid_at
+        datetime created_at
+    }
+
+    PRICING_RULES {
+        int id PK
+        int branch_id FK
+        enum day_type
+        time start_hour
+        time end_hour
+        decimal price_per_hour
+        string label
+        datetime created_at
+    }
+
+    OWNERS {
+        int id PK
+        string username UK
+        string password
+        string name
+        string email
+        boolean is_super_admin
+        datetime created_at
+    }
+
+    OWNER_BRANCHES {
+        int owner_id FK
+        int branch_id FK
+    }

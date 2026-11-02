@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  # PHP + Apache (XAMPP-like)
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: smashzone_app
+    ports:
+      - "8080:80"
+    volumes:
+      - .:/var/www/html
+    depends_on:
+      - db
+    environment:
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_DATABASE=badminton_booking
+      - DB_USERNAME=smashzone
+      - DB_PASSWORD=smashzone_pass
+      - DB_CHARSET=utf8mb4
+      - APP_URL=http://localhost:8080
+      - SESSION_LIFETIME=120
+    networks:
+      - smashzone_net
+
+  # MySQL Database
+  db:
+    image: mysql:8.0
+    container_name: smashzone_db
+    ports:
+      - "3307:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=root_pass
+      - MYSQL_DATABASE=badminton_booking
+      - MYSQL_USER=smashzone
+      - MYSQL_PASSWORD=smashzone_pass
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    networks:
+      - smashzone_net
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot_pass"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # phpMyAdmin (quản lý CSDL qua giao diện web)
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: smashzone_pma
+    ports:
+      - "8081:80"
+    environment:
+      - PMA_HOST=db
+      - PMA_PORT=3306
+      - PMA_ARBITRARY=1
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - smashzone_net
+
+networks:
+  smashzone_net:
+    driver: bridge
+
+volumes:
+  mysql_data:
