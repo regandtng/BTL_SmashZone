@@ -177,6 +177,7 @@ class BookingController extends Controller
             $stmt = $pdo->prepare("
                 SELECT id FROM bookings 
                 WHERE court_id = ? AND booking_date = ? AND status IN ('confirmed', 'pending')
+                AND (status = 'confirmed' OR expires_at IS NULL OR expires_at > NOW())
                 AND ((start_time < ? AND end_time > ?) OR (start_time >= ? AND start_time < ?))
                 FOR UPDATE
             ");
@@ -193,10 +194,8 @@ class BookingController extends Controller
                 $this->redirect('/branches');
             }
 
-            // Tạo booking pending, hết hạn sau 3 phút
-            $expiresAt = date('Y-m-d H:i:s', strtotime('+3 minutes'));
-
-            $bookingId = $bookingModel->create([
+            // Tạo booking pending, thời hạn được tính theo đồng hồ MySQL.
+            $bookingId = $bookingModel->createPending([
                 'booking_code'   => $bookingModel->generateBookingCode(),
                 'user_id'        => Session::get('user_id'),
                 'customer_name'  => $customerName,
@@ -210,7 +209,6 @@ class BookingController extends Controller
                 'duration_hours' => $pending['end_hour'] - $pending['start_hour'],
                 'total_price'    => $pending['total_price'],
                 'status'         => 'pending',
-                'expires_at'     => $expiresAt,
                 'notes'          => $notes,
             ]);
 

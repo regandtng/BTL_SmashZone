@@ -61,8 +61,7 @@ try {
             SET status = 'cancelled',
                 notes = CONCAT(COALESCE(notes, ''), ' | Auto cancel: quá hạn thanh toán')
             WHERE status = 'pending' 
-            AND expires_at IS NOT NULL 
-            AND expires_at < NOW()
+            AND (expires_at IS NULL OR expires_at <= NOW())
         ");
         $stmt->execute();
         $count = $stmt->rowCount();

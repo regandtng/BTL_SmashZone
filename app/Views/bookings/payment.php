@@ -239,23 +239,9 @@ document.querySelectorAll('input[name="payment_method"]').forEach(radio => {
     const bannerEl = document.getElementById('countdownBanner');
     if (!timerEl || !bannerEl) return;
     
-    // Try to parse expires_at from booking data
-    let expiresAtRaw = '<?= $booking['expires_at'] ?? '' ?>';
-    console.log('DEBUG expiresAtRaw:', expiresAtRaw);
-    
-    let expires = 0;
-    if (expiresAtRaw) {
-        let expiresAt = expiresAtRaw.replace(' ', 'T');
-        console.log('DEBUG expiresAt (ISO):', expiresAt);
-        expires = new Date(expiresAt).getTime();
-        console.log('DEBUG expires (timestamp):', expires, 'now:', Date.now(), 'diff:', expires - Date.now());
-    }
-    
-    // If expires_at is missing, invalid, or already in the past, use fallback (3 min from page load)
-    if (!expiresAtRaw || isNaN(expires) || expires <= Date.now()) {
-        console.log('DEBUG: Using fallback - 3 minutes from now');
-        expires = Date.now() + 3 * 60 * 1000;
-    }
+    const expirationUrl = <?= json_encode(BASE_URL . '/payment/' . (int)$booking['id'], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?>;
+    const expires = Date.now() + (<?= (int)$remainingSeconds ?> * 1000);
+    let interval;
     
     function updateTimer() {
         const now = Date.now();
@@ -265,9 +251,10 @@ document.querySelectorAll('input[name="payment_method"]').forEach(radio => {
             timerEl.textContent = '00:00';
             timerEl.style.color = '#ff4d4d';
             bannerEl.classList.add('expired');
-            // Redirect after 1 second
+            clearInterval(interval);
+            // Ask the server to persist cancellation and release the slot.
             setTimeout(() => {
-                window.location.href = '<?= BASE_URL ?>/branches';
+                window.location.replace(expirationUrl);
             }, 1000);
             return;
         }
@@ -285,8 +272,8 @@ document.querySelectorAll('input[name="payment_method"]').forEach(radio => {
         }
     }
     
+    interval = setInterval(updateTimer, 1000);
     updateTimer();
-    const interval = setInterval(updateTimer, 1000);
     
     // Cleanup on page unload
     window.addEventListener('beforeunload', () => clearInterval(interval));

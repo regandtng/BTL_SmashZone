@@ -6,7 +6,6 @@ use Core\Controller;
 use App\Models\Booking;
 use App\Models\Payment;
 use Core\Session;
-use DateTime;
 
 class PaymentController extends Controller
 {
@@ -19,6 +18,7 @@ class PaymentController extends Controller
         }
 
         $bookingModel = new Booking();
+        $bookingModel->cleanExpiredPending();
         $booking = $bookingModel->findById($bookingId);
 
         if (!$booking) {
@@ -36,21 +36,13 @@ class PaymentController extends Controller
             $this->redirect("/booking/success/{$bookingId}");
         }
 
-        // Kiểm tra booking pending đã hết hạn (3 phút)
-        if ($booking['status'] === 'pending' && $booking['expires_at']) {
-            $now = new DateTime();
-            $expires = new DateTime($booking['expires_at']);
-            if ($now >= $expires) {
-                // Auto cancel booking hết hạn
-                $bookingModel->update($bookingId, [
-                    'status' => 'cancelled',
-                    'notes' => ($booking['notes'] ? $booking['notes'] . ' | ' : '') . 'Auto cancel: quá hạn thanh toán 3 phút'
-                ]);
-                Session::set('pending_booking', null);
-                Session::flash('error', 'Đã quá 3 phút thanh toán. Đơn đặt sân đã bị hủy tự động, sân đã được giải phóng.');
-                $this->redirect('/branches');
-            }
+        if ($booking['status'] !== 'pending') {
+            Session::set('pending_booking', null);
+            Session::flash('error', 'Đơn đặt sân đã hết hạn hoặc đã bị hủy. Vui lòng chọn sân và đặt lại.');
+            $this->redirect('/branches');
         }
+
+        $remainingSeconds = $bookingModel->getPendingSecondsRemaining($bookingId);
 
         $paymentMethods = [
             ['id' => 'qr',   'label' => 'Chuyển khoản QR',  'icon' => '🏦', 'desc' => 'Quét QR qua app ngân hàng'],
@@ -61,6 +53,7 @@ class PaymentController extends Controller
         $this->render('bookings/payment', [
             'title'          => 'Thanh Toán - SmashZone',
             'booking'        => $booking,
+            'remainingSeconds' => $remainingSeconds,
             'paymentMethods' => $paymentMethods,
         ]);
     }
@@ -85,6 +78,7 @@ class PaymentController extends Controller
         }
 
         $bookingModel = new Booking();
+        $bookingModel->cleanExpiredPending();
         $paymentModel = new Payment();
 
         $booking = $bookingModel->findById($bookingId);
@@ -99,18 +93,14 @@ class PaymentController extends Controller
             $this->redirect('/booking/history');
         }
 
-        // Kiểm tra booking pending đã hết hạn
-        if ($booking['status'] === 'pending' && $booking['expires_at']) {
-            $now = new DateTime();
-            $expires = new DateTime($booking['expires_at']);
-            if ($now >= $expires) {
-                $bookingModel->update($bookingId, [
-                    'status' => 'cancelled',
-                    'notes' => ($booking['notes'] ? $booking['notes'] . ' | ' : '') . 'Auto cancel: quá hạn thanh toán 3 phút'
-                ]);
-                Session::flash('error', 'Đã quá 3 phút thanh toán. Đơn đặt sân đã bị hủy tự động.');
-                $this->redirect('/branches');
-            }
+        if ($booking['status'] === 'confirmed') {
+            $this->redirect("/booking/success/{$bookingId}");
+        }
+
+        if ($booking['status'] !== 'pending') {
+            Session::set('pending_booking', null);
+            Session::flash('error', 'Đơn đặt sân đã hết hạn hoặc đã bị hủy. Vui lòng chọn sân và đặt lại.');
+            $this->redirect('/branches');
         }
 
         // Create payment record
