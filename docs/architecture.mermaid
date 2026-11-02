@@ -1,6 +1,5 @@
 flowchart TD
-    Client[(Trình duyệt / Mobile Web)] <-->|HTTP/HTML| LB[Load Balancer / Reverse Proxy]
-    LB -->|PHP Request| WebServer[(Web Server - Apache/Nginx)]
+    Client[(Trình duyệt / Mobile Web)] <-->|HTTP/HTML| WebServer[(Web Server - Apache/Nginx)]
     
     subgraph MVC_PHP["SmashZone PHP (MVC)"]
         WebServer --> Router[Router.php]
@@ -20,7 +19,7 @@ flowchart TD
     
     subgraph Booking["Luồng đặt sân"]
         Controller --> BookingC[BookingController]
-        BookingC -->|Kiểm tra trùng giờ| Model
+        BookingC -->|Kiểm tra trùng giờ + Transaction| Model
         Model -->|bookings / courts| DB
         BookingC -->|Tạo pending| Model
         Model -->|expires_at| DB

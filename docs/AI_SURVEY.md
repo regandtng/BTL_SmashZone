@@ -85,11 +85,20 @@ Hãy xuất mã Mermaid.js để có thể chỉnh sửa sau này.
 | Thiết kế kỹ thuật | Software Architect | `docs/erd.mermaid`, `docs/sequence.mermaid`, `docs/architecture.mermaid` |
 
 ### Ví dụ edge case từ AI đã đưa vào PRD
-- **EC-1 Trùng giờ đặt sân:** Hai người chọn cùng sân, cùng giờ gần đồng thời → double-check availability tại `processConfirm` trước khi insert.
-- **EC-2 Hết hạn thanh toán (3 phút):** Cron `--clean-pending` chạy định kỳ; controller kiểm tra `expires_at` trước khi hiển thị trang thanh toán.
-- **EC-3 Hủy sân trước khi thanh toán:** Cho phép hủy booking pending, không cho hủy booking confirmed đã thanh toán trừ khi owner can thiệp.
-- **EC-4 Booking vào quá khứ:** Controller chặn ngày `< today`; điều chỉnh về hôm nay nếu người dùng sửa URL.
-- **EC-7 CSRF / Session hijacking:** Thêm CSRF token vào tất cả form POST; session regeneration sau đăng nhập.
+- **EC-1 Trùng giờ đặt sân:** Hai người chọn cùng sân, cùng giờ gần đồng thời → double-check availability tại `processConfirm` trước khi insert. (Đã triển khai trong `BookingController::processConfirm`)
+- **EC-2 Hết hạn thanh toán (3 phút):** Cron `--clean-pending` chạy định kỳ; controller kiểm tra `expires_at` trước khi hiển thị trang thanh toán. (Đã triển khai trong `PaymentController::show`)
+- **EC-3 Hủy sân trước khi thanh toán:** Cho phép hủy booking pending, không cho hủy booking confirmed đã thanh toán trừ khi owner can thiệp. (Đã triển khai trong `OwnerController::updateBooking` và `PaymentController`)
+- **EC-4 Booking vào quá khứ:** Controller chặn ngày `< today`; điều chỉnh về hôm nay nếu người dùng sửa URL. (Đã triển khai trong `BookingController::create`)
+- **EC-7 CSRF / Session hijacking:** Thêm CSRF token vào tất cả form POST; session regeneration sau đăng nhập. (Đã triển khai `Session::csrfField()`, `session_regenerate_id(true)`)
+
+### Quyết định của nhóm sau khi khảo sát AI
+| Ý kiến AI ban đầu | Quyết định của nhóm | Lý do |
+|-------------------|---------------------|-------|
+| AI kiến trúc đề xuất dùng React + Tailwind/Shadcn | Giữ PHP thuần + MVC | Dự án nhỏ, deploy dễ trên shared hosting/XAMPP, không cần build tool |
+| AI bảo mật đề xuất giới hạn 5 lần đăng nhập sai | Đánh dấu "ngoài phạm vi v1" | Không có thời gian triển khai rate limiter, ghi vào roadmap |
+| AI DEV đề xuất dùng Composer + Laravel | Giữ PHP thuần | Tránh phụ thuộc externo, kiểm soát toàn bộ mã nguồn (tiêu chí chấm) |
+| AI QA đề xuất xóa booking ngay khi hết hạn | Giữ status 'pending' + cron dọn sau 3 phút | Tránh mất đơn nếu khách đang trong quá trình thanh toán |
+
 
 ## 4. Làm sao khác với khảo sát truyền thống
 

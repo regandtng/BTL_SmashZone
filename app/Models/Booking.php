@@ -56,13 +56,15 @@ class Booking extends Model {
     }
 
     public function isSlotAvailable($courtId, $date, $startTime, $endTime) {
+        $startTimeStr = sprintf('%02d:00:00', $startTime);
+        $endTimeStr   = sprintf('%02d:00:00', $endTime);
         $stmt = $this->db->prepare("
             SELECT COUNT(*) as cnt FROM {$this->table} 
             WHERE court_id = ? AND booking_date = ? AND status IN ('confirmed', 'pending')
             AND ((start_time < ? AND end_time > ?) OR (start_time >= ? AND start_time < ?))
         ");
         $stmt->execute([
-            $courtId, $date, $endTime, $startTime, $startTime, $endTime
+            $courtId, $date, $endTimeStr, $startTimeStr, $startTimeStr, $endTimeStr
         ]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         return $row['cnt'] == 0;

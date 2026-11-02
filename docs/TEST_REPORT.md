@@ -81,15 +81,17 @@ Thời gian chạy: ~359ms
 
 | Chỉ số | Giá trị |
 |--------|---------|
-| Tổng test case | 7 |
-| Passed | 7 |
+| Tổng test case | 9 |
+| Passed | 9 |
 | Failed | 0 |
-| Thời gian chạy | ~359ms |
+| Thời gian chạy | ~307ms |
 
 Chi tiết method đã kiểm thử:
-- `Booking::isSlotAvailable()` — 1 test case (trả về true khi sân trống)
+- `Booking::isSlotAvailable()` — 3 test case (sân trống, trùng giờ/chồng lấn, không chồng lấn sau giờ đặt)
 - `Booking::generateBookingCode()` — 2 test case (định dạng BB-YYYYMMDD-XXXXX + tính duy nhất)
 - `PricingRule::getPrice()` — 4 test case (weekday off-peak, weekday peak, weekend, giá dương)
+
+**Lưu ý quan trọng:** Trong quá trình viết test, phát hiện bug thực tế: `isSlotAvailable` truyền giờ dạng integer (9, 11) vào cột TIME, MySQL chuyển đổi thành '00:00:09' thay vì '09:00:00', khiến kiểm tra trùng giờ không hoạt động. Đã sửa bằng cách format giờ thành 'HH:00:00' trước khi truy vấn (`app/Models/Booking.php`).
 
 **Lưu ý coverage:** Đây là số test case passed, chưa phải phần trăm dòng code được bao phủ. Để có line coverage chính xác, cài **Xdebug** và chạy:
 ```bash

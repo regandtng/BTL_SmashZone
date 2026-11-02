@@ -3,8 +3,8 @@ erDiagram
     BRANCHES ||--o{ COURTS : "chứa"
     BRANCHES ||--o{ BOOKINGS : "chi nhánh của"
     COURTS ||--o{ BOOKINGS : "được đặt"
-    BOOKINGS ||--|| PAYMENTS : "thanh toán"
-    PRICING_RULES ||--o{ BRANCHES : "áp dụng cho"
+    BOOKINGS ||--o{ PAYMENTS : "thanh toán"
+    PRICING_RULES o|--o{ BRANCHES : "áp dụng cho"
     OWNERS ||--o{ OWNER_BRANCHES : "quản lý"
     BRANCHES ||--o{ OWNER_BRANCHES : "được quản lý"
 

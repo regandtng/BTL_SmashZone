@@ -166,34 +166,60 @@ class BookingController extends Controller
         }
 
         $bookingModel = new Booking();
+        $db = \Core\Database::getInstance();
+        $pdo = $db->getConnection();
 
-        // Double-check availability
-        if (!$bookingModel->isSlotAvailable($pending['court_id'], $pending['booking_date'], $pending['start_hour'], $pending['end_hour'])) {
+        try {
+            $pdo->beginTransaction();
+
+            // Double-check availability với khóa SELECT ... FOR UPDATE (tránh race condition)
+            $stmt = $pdo->prepare("
+                SELECT id FROM bookings 
+                WHERE court_id = ? AND booking_date = ? AND status IN ('confirmed', 'pending')
+                AND ((start_time < ? AND end_time > ?) OR (start_time >= ? AND start_time < ?))
+                FOR UPDATE
+            ");
+            $stmt->execute([
+                $pending['court_id'], $pending['booking_date'], $pending['end_hour'] . ':00:00', $pending['start_hour'] . ':00:00',
+                $pending['start_hour'] . ':00:00', $pending['end_hour'] . ':00:00'
+            ]);
+            $conflict = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($conflict) {
+                $pdo->rollBack();
+                Session::set('pending_booking', null);
+                Session::flash('error', 'Rất tiếc! Sân vừa được đặt bởi người khác. Vui lòng chọn khung giờ khác.');
+                $this->redirect('/branches');
+            }
+
+            // Tạo booking pending, hết hạn sau 3 phút
+            $expiresAt = date('Y-m-d H:i:s', strtotime('+3 minutes'));
+
+            $bookingId = $bookingModel->create([
+                'booking_code'   => $bookingModel->generateBookingCode(),
+                'user_id'        => Session::get('user_id'),
+                'customer_name'  => $customerName,
+                'customer_phone' => $customerPhone,
+                'customer_email' => $customerEmail,
+                'court_id'       => $pending['court_id'],
+                'branch_id'      => $pending['branch_id'],
+                'booking_date'   => $pending['booking_date'],
+                'start_time'     => sprintf('%02d:00:00', $pending['start_hour']),
+                'end_time'       => sprintf('%02d:00:00', $pending['end_hour']),
+                'duration_hours' => $pending['end_hour'] - $pending['start_hour'],
+                'total_price'    => $pending['total_price'],
+                'status'         => 'pending',
+                'expires_at'     => $expiresAt,
+                'notes'          => $notes,
+            ]);
+
+            $pdo->commit();
+        } catch (\Exception $e) {
+            $pdo->rollBack();
             Session::set('pending_booking', null);
-            Session::flash('error', 'Rất tiếc! Sân vừa được đặt bởi người khác. Vui lòng chọn khung giờ khác.');
+            Session::flash('error', 'Có lỗi xảy ra khi đặt sân. Vui lòng thử lại.');
             $this->redirect('/branches');
         }
-
-        // Tạo booking pending, hết hạn sau 3 phút
-        $expiresAt = date('Y-m-d H:i:s', strtotime('+3 minutes'));
-        
-        $bookingId = $bookingModel->create([
-            'booking_code'   => $bookingModel->generateBookingCode(),
-            'user_id'        => Session::get('user_id'),
-            'customer_name'  => $customerName,
-            'customer_phone' => $customerPhone,
-            'customer_email' => $customerEmail,
-            'court_id'       => $pending['court_id'],
-            'branch_id'      => $pending['branch_id'],
-            'booking_date'   => $pending['booking_date'],
-            'start_time'     => sprintf('%02d:00:00', $pending['start_hour']),
-            'end_time'       => sprintf('%02d:00:00', $pending['end_hour']),
-            'duration_hours' => $pending['end_hour'] - $pending['start_hour'],
-            'total_price'    => $pending['total_price'],
-            'status'         => 'pending',
-            'expires_at'     => $expiresAt,
-            'notes'          => $notes,
-        ]);
 
         Session::set('pending_booking', null);
         $this->redirect("/payment/{$bookingId}");
@@ -205,11 +231,22 @@ class BookingController extends Controller
     // GET /booking/success/{bookingId}
     public function success($bookingId)
     {
+        if (!Session::has('user_id')) {
+            Session::flash('error', 'Vui lòng đăng nhập để xem đơn đặt sân.');
+            $this->redirect('/login');
+        }
+
         $bookingModel = new Booking();
         $booking = $bookingModel->findById($bookingId);
 
         if (!$booking) {
             $this->redirect('/');
+        }
+
+        // Kiểm tra quyền sở hữu: user chỉ xem được đơn của mình
+        if ((int)($booking['user_id'] ?? 0) !== (int)Session::get('user_id')) {
+            Session::flash('error', 'Bạn không có quyền xem đơn này.');
+            $this->redirect('/booking/history');
         }
 
         $paymentModel = new Payment();
@@ -226,12 +263,23 @@ class BookingController extends Controller
     // GET /booking/detail/{id}
     public function detail($id)
     {
+        if (!Session::has('user_id')) {
+            Session::flash('error', 'Vui lòng đăng nhập để xem chi tiết đơn đặt sân.');
+            $this->redirect('/login');
+        }
+
         $bookingModel = new Booking();
         $booking = $bookingModel->findDetailed($id);
 
         if (!$booking) {
             Session::flash('error', 'Không tìm thấy đặt sân.');
             $this->redirect('/history');
+        }
+
+        // Kiểm tra quyền sở hữu: user chỉ xem được đơn của mình
+        if ((int)($booking['user_id'] ?? 0) !== (int)Session::get('user_id')) {
+            Session::flash('error', 'Bạn không có quyền xem đơn này.');
+            $this->redirect('/booking/history');
         }
 
         $paymentModel = new Payment();

@@ -87,19 +87,20 @@ Danh sách câu hỏi thầy cô dễ hỏi khi bảo vệ, cùng câu trả l�
 
 ### Câu 12: Xử lý trạng thái Loading/Error/Empty thế nào?
 **Trả lời:**
-- **Loading:** Các trang chọn sân, thanh toán hiển thị spinner/skeleton khi chờ xử lý (có thể bổ sung JavaScript đơn giản).
-- **Error:** Flash message hiển thị lỗi (ví dụ "Khung giờ đã được đặt", "Sai mật khẩu").
-- **Empty:** Trang danh sách chi nhánh/trống, lịch sử trống hiển thị thông báo "Không có dữ liệu" thay vì trang trắng.
+- **Loading:** Hiện tại hệ thống PHP thuần render trang hoàn toàn trước khi gửi về trình duyệt, nên không có spinner/skeleton động trên từng trang. Trang thanh toán có đồng hồ đếm ngược 3 phút (JavaScript) để nhấn mạnh thời gian chờ. Nếu cần loading spinner, có thể bổ sung JS đơn giản trên form đặt sân.
+- **Error:** Flash message qua `Session::flash()` hiển thị lỗi (ví dụ "Khung giờ đã được đặt", "Sai mật khẩu", "Quá hạn thanh toán").
+- **Empty:** Trang danh sách chi nhánh/trống, lịch sử trống hiển thị thông báo "Không có dữ liệu" thay vì trang trắng (xem `branches/index.php`, `bookings/history.php`).
 
 ---
 
 ## 5. Về quy trình & Git
 
-### Câu 13: Repo chỉ có 1 commit, làm sao chứng minh Git Workflow?
+### Câu 13: Lịch sử commit và Git Workflow thế nào?
 **Trả lời:**
+- Repo đã có 31 commit trên `main` (không chỉ 1 commit ban đầu).
 - Đã tạo tài liệu `GIT_WORKFLOW.md` mô tả chiến lược nhánh (`main`, `feature/*`, `fix/*`), quy trình Pull Request review, branch protection.
-- Đã tạo các nhánh feature trên remote (nếu đã push) để minh họa quy trình làm việc nhóm.
-- Trong bảo vệ, có thể demo quá trình tạo nhánh, commit, mở PR qua GitHub/GitLab.
+- Từ lúc nhận góp ý, mọi thay đổi mới được thực hiện trên nhánh `fix/*` và merge vào `main` qua Pull Request thật (chụp màn hình PR làm bằng chứng khi bảo vệ).
+- Quy ước commit message: `feat:`, `fix:`, `docs:` (áp dụng cho các commit mới).
 
 ### Câu 14: Có tài liệu kỹ thuật gì để dự án dễ duy trì sau này?
 **Trả lời:**
@@ -115,13 +116,13 @@ Danh sách câu hỏi thầy cô dễ hỏi khi bảo vệ, cùng câu trả l�
 
 ### Câu 15: Dùng AI Agent gì, và để làm gì trong dự án?
 **Trả lời:**
-- [Tên AI Agent, ví dụ: Cursor / GitHub Copilot / v.v.]
-- Vai trò AI đã đóng:
-  - Senior PM: phân rã ý tưởng thành Epic, Feature, User Stories.
-  - BA & Edge-Case Finder: viết Gherkin, tìm rủi ro bảo mật và nghiệp vụ.
-  - Software Architect: thiết kế MVC, ERD, Sequence diagram.
-  - Backend Engineer: sinh mã Controller, Model, Cron job.
-  - QA Engineer: viết unit test, kịch bản Playwright, quét OWASP.
+- Công cụ AI Agent đã dùng: **OpenCode, Claude, GitHub Copilot**
+- Vai trò AI Agent đã đóng trong dự án:
+  - Senior PM: phân rã ý tưởng thành Epic, Feature, User Stories (gốc cho `docs/PRD.md`).
+  - BA & Edge-Case Finder: viết User Stories Gherkin, tìm rủi ro bảo mật và nghiệp vụ (gốc cho bảng EC-1 đến EC-8 trong `docs/PRD.md`).
+  - Software Architect: thiết kế MVC, ERD, Sequence diagram (gốc cho `docs/erd.mermaid`, `docs/sequence.mermaid`, `docs/architecture.mermaid`).
+  - Backend Engineer: sinh mã Controller, Model, Cron job (`app/Controllers/OwnerController.php`, `cron.php`).
+  - QA Engineer: viết unit test, kịch bản Playwright, quét OWASP (`tests/`, `docs/TEST_REPORT.md`, `docs/OWASP_CHECKLIST.md`).
 - Mọi đoạn code AI sinh ra đều được nhóm đọc lại, kiểm tra và sửa lỗi trước khi commit (không mù quen copy-paste).
 
 ---

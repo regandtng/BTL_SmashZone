@@ -279,6 +279,179 @@ paths:
               schema:
                 type: string
 
+  /owner/branches:
+    get:
+      summary: Danh sách chi nhánh của owner
+      operationId: ownerBranches
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          content:
+            text/html:
+              schema:
+                type: string
+
+  /owner/bookings:
+    get:
+      summary: Danh sách đặt sân theo chi nhánh
+      operationId: ownerBookings
+      security:
+        - sessionAuth: []
+      parameters:
+        - in: query
+          name: branch_id
+          schema:
+            type: integer
+        - in: query
+          name: status
+          schema:
+            type: string
+        - in: query
+          name: date
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          content:
+            text/html:
+              schema:
+                type: string
+
+  /owner/pricing:
+    get:
+      summary: Quản lý quy giá theo khung giờ
+      operationId: ownerPricing
+      security:
+        - sessionAuth: []
+      parameters:
+        - in: query
+          name: branch_id
+          schema:
+            type: integer
+      responses:
+        '200':
+          content:
+            text/html:
+              schema:
+                type: string
+
+  /owner/revenue:
+    get:
+      summary: Báo cáo doanh thu
+      operationId: ownerRevenue
+      security:
+        - sessionAuth: []
+      parameters:
+        - in: query
+          name: branch_id
+          schema:
+            type: integer
+        - in: query
+          name: from
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: to
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          content:
+            text/html:
+              schema:
+                type: string
+
+  /register:
+    post:
+      summary: Đăng ký tài khoản khách hàng
+      operationId: authRegister
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+                - name
+                - email
+                - phone
+                - password
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                phone:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '302':
+          description: Redirect sau khi đăng ký
+
+  /logout:
+    get:
+      summary: Đăng xuất
+      operationId: authLogout
+      responses:
+        '302':
+          description: Redirect về trang chủ
+
+  /profile:
+    get:
+      summary: Xem hồ sơ cá nhân
+      operationId: profileShow
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          content:
+            text/html:
+              schema:
+                type: string
+
+  /booking/success/{bookingId}:
+    get:
+      summary: Trang đặt sân thành công
+      operationId: bookingSuccess
+      security:
+        - sessionAuth: []
+      parameters:
+        - in: path
+          name: bookingId
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          content:
+            text/html:
+              schema:
+                type: string
+
+  /booking/detail/{id}:
+    get:
+      summary: Chi tiết đơn đặt sân
+      operationId: bookingDetail
+      security:
+        - sessionAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          content:
+            text/html:
+              schema:
+                type: string
+
 components:
   securitySchemes:
     sessionAuth:

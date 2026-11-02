@@ -56,7 +56,10 @@ CREATE TABLE bookings (
     completed_at TIMESTAMP NULL DEFAULT NULL,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
     FOREIGN KEY (court_id) REFERENCES courts(id) ON DELETE CASCADE,
-    FOREIGN KEY (branch_id) REFERENCES branches(id) ON DELETE CASCADE
+    FOREIGN KEY (branch_id) REFERENCES branches(id) ON DELETE CASCADE,
+    INDEX idx_bookings_court_date (court_id, booking_date),
+    INDEX idx_bookings_status (status),
+    INDEX idx_bookings_user (user_id)
 );
 
 CREATE TABLE payments (
