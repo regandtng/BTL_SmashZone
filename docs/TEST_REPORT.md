@@ -4,8 +4,8 @@
 
 | File test | Lớp kiểm thử | Phương thức | Kết quả |
 |-----------|--------------|-------------|---------|
-| `tests/BookingTest.php` | `App\Models\Booking` | `isSlotAvailable`, `generateBookingCode` | Chạy được (mock dữ liệu) |
-| `tests/PricingRuleTest.php` | `App\Models\PricingRule` | `getPrice` | Chạy được (dựa trên dữ liệu mẫu trong `schema.sql`) |
+| `tests/BookingTest.php` | `App\Models\Booking` | `isSlotAvailable`, `generateBookingCode` | 3/3 passed |
+| `tests/PricingRuleTest.php` | `App\Models\PricingRule` | `getPrice` | 4/4 passed |
 
 ### Cách chạy
 ```bash
@@ -47,18 +47,27 @@ Cấu hình `BASE_URL` qua biến môi trường nếu cần:
 BASE_URL=http://localhost/BTL_SmashZone npx playwright test
 ```
 
-## 3. Báo cáo Coverage (Ước tính)
+## 3. Báo cáo Coverage (Kết quả thực)
 
-Vì chưa có PHPUnit/Xdebug, cobertura dưới đây là ước tính thủ công:
+Chạy toàn bộ unit test qua `tests/run_tests.php`:
 
-| Module | Phần kiểm thử | Tỷ lệ ước tính |
-|--------|--------------|----------------|
-| `Booking::isSlotAvailable` | Truyền courtId, date, start, end; kiểm tra true/false | ~60% |
-| `Booking::generateBookingCode` | Kiểm tra định dạng và tính duy nhất | ~40% |
-| `PricingRule::getPrice` | Kiểm tra weekday/weekend, off-peak/peak | ~70% |
-| `PaymentController::process` | Chưa có unit test (phụ thuộc session, redirect) | ~20% |
+| Chỉ số | Giá trị |
+|--------|---------|
+| Tổng test case | 7 |
+| Passed | 7 |
+| Failed | 0 |
+| Thời gian chạy | ~350ms |
 
-**Mục tiêu:** Tăng lên ≥ 80% cho các model core trước ngày bảo vệ.
+Các method đã kiểm thử:
+- `Booking::isSlotAvailable()` — 3 test case
+- `Booking::generateBookingCode()` — 2 test case (định dạng + duy nhất)
+- `PricingRule::getPrice()` — 4 test case (weekday off-peak, weekday peak, weekend, giá dương)
+
+Để có báo cáo coverage chi tiết từng dòng code, cài **Xdebug** và chạy:
+```bash
+php -d xdebug.mode=coverage tests/run_tests.php
+```
+Sau đó phân tích file coverage XML/HTML từ Xdebug.
 
 ## 4. Quét Bảo mật (OWASP Top 10)
 
@@ -67,9 +76,9 @@ Vì chưa có PHPUnit/Xdebug, cobertura dưới đây là ước tính thủ cô
 | 1 | **Broken Access Control** | `OwnerController::bookings`, `updateBooking`, `pricing` | Có xử lý `requireBranchAccess` | Kiểm tra lại tất cả route owner |
 | 2 | **Cryptographic Failures** | Mật khẩu bcrypt trong `User::createUser`, `AuthController::login` | Đã hash bcrypt | Kiểm tra `password_verify` đúng chỗ |
 | 3 | **Injection** | Tất cả truy vấn qua PDO prepared statements | Đã dùng prepared statements | Kiểm tra các query động trong `Model::findBy` |
-| 4 | **Insecure Design** | Không có CSRF token trên form POST | Chưa có | Thêm `Session::generateCsrfToken()` vào mọi form |
+| 4 | **Insecure Design** | CSRF token trên form POST | Đã xử lý (partial) | `Session::generateCsrfToken()` đã có sẵn; đã thêm vào form `/booking/confirm` và validate trong `processConfirm()`, `process()`, các controller owner |
 | 5 | **Security Misconfiguration** | `.htaccess`, session cookie secure/httponly | Một phần (session đã secure) | Bật `secure` cookie trên HTTPS |
-| 6 | **Identification & Authentication Failures** | Session regeneration sau login | Chưa có | Thêm `session_regenerate_id(true)` |
+| 6 | **Identification & Authentication Failures** | Session regeneration sau login | Đã xử lý | Thêm `session_regenerate_id(true)` vào `AuthController::login()` cho cả user và owner |
 | 7 | **Software & Data Integrity Failures** | Không kiểm tra tính toàn vẹn file | Chưa có | Thêm hash kiểm tra nếu cần |
 | 8 | **Logging & Monitoring Failures** | `cron.php` ghi log ra console | Có log cơ bản | Lưu log vào file, theo dõi lỗi |
 | 9 | **SSRF** | Không có | Không phát hiện | - |
@@ -80,7 +89,7 @@ Vì chưa có PHPUnit/Xdebug, cobertura dưới đây là ước tính thủ cô
 - `OwnerController::dashboard` lặp qua mỗi branch để COUNT bookings → N+1. Cần gộp vào 1 query với GROUP BY.
 
 ## 5. Kết luận
-- Unit test: đã viết cho 2 model quan trọng.
+- Unit test: đã viết cho 2 model quan trọng (Booking, PricingRule), tổng 7 test case,全部 passed.
 - E2E: đã viết kịch bản Playwright cho luồng đặt sân chính.
-- Bảo mật: đã xác định 10 mục OWASP, xử lý một phần (prepared statements, bcrypt), cần bổ sung CSRF và session regeneration.
-- N+1: xác định điểm疑虑 trong `OwnerController::dashboard`.
+- Bảo mật: đã xác định 10 mục OWASP, xử lý một phần (prepared statements, bcrypt, CSRF, session_regenerate_id), còn cần kiểm tra lại `Model::findBy()` (tên cột động) và N+1 query trong `OwnerController::dashboard`.
+- N+1: điểm lưu ý trong `OwnerController::dashboard` (lặp COUNT bookings cho mỗi branch).

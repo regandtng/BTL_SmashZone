@@ -6,19 +6,8 @@ require_once __DIR__ . '/bootstrap.php';
 
 use App\Models\PricingRule;
 
-$pass = 0;
-$fail = 0;
-
-function test($name, $condition) {
-    global $pass, $fail;
-    if ($condition) {
-        echo "  [PASS] $name\n";
-        $pass++;
-    } else {
-        echo "  [FAIL] $name\n";
-        $fail++;
-    }
-}
+require_once __DIR__ . '/helpers.php';
+test_reset();
 
 echo "--- PricingRuleTest ---\n";
 
@@ -41,5 +30,6 @@ test('Pricing weekend 2 giờ = 360000', $price === 360000);
 $price = $pricing->getPrice(1, '2026-11-02', 8, 10);
 test('Pricing trả về giá dương', is_numeric($price) && $price > 0);
 
-echo "\nKết quả: $pass passed, $fail failed\n";
-exit($fail > 0 ? 1 : 0);
+$r = test_results();
+echo "\nKết quả: {$r['pass']} passed, {$r['fail']} failed\n";
+exit($r['fail'] > 0 ? 1 : 0);

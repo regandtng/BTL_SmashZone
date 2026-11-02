@@ -12,12 +12,13 @@
 - [ ] Kiểm tra `PaymentController::show` — không kiểm tra xem booking có thuộc về user hiện tại không
 
 ## 3. CSRF (Cross-Site Request Forgery)
-- [ ] `Session::generateCsrfToken()` đã có sẵn trong `Core\Session`
-- [ ] Chưa có token CSRF trong các form POST (`/booking/store`, `/payment/process`, `/owner/*`, `/auth/*`)
-- [ ] Cần thêm `<input type="hidden" name="csrf_token" value="<?= Session::generateCsrfToken() ?>"` và validate trong controller
+- [x] `Session::generateCsrfToken()` đã có sẵn trong `Core\Session`
+- [x] Đã thêm token CSRF vào form `/booking/confirm`
+- [x] Đã validate CSRF trong `BookingController::processConfirm()`, `PaymentController::process()`, và tất cả method POST của `OwnerController`
+- [ ] Cần bổ sung CSRF vào các form còn lại (`/booking/store`, `/owner/login`, `/auth/*`) nếu cần bảo vệ cao hơn
 
 ## 4. Session Management
-- [ ] `session_regenerate_id(true)` sau đăng nhập thành công (chưa có)
+- [x] `session_regenerate_id(true)` sau đăng nhập thành công (đã thêm vào `AuthController::login()`)
 - [x] Session cookie: `httponly=true`, `samesite=Lax`, `secure` nếu HTTPS
 - [ ] Session timeout xử lý rõ ràng (hiện có `SESSION_LIFETIME`)
 
@@ -28,7 +29,7 @@
 - [ ] Không có multi-factor authentication
 
 ## 6. Error Handling & Information Disclosure
-- [ ] `Database::query` catch `PDOException` và `die("Query failed: ...")` — có thể rò râge thông tin CSDB
+- [ ] `Database::query` catch `PDOException` và `die("Query failed: ...")` — có thể rò rỉ thông tin CSDB
 - [ ] Cấu hình hiển thị lỗi PHP (`display_errors`) nên tắt trên production
 
 ## 7. File Upload (nếu có)

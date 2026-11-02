@@ -167,7 +167,7 @@ Feature: Owner quản lý chi nhánh sở hữu
 | EC-3 | **Hủy sân trước khi thanh toán** | Cho phép hủy booking pending (trả lại khung giờ), không cho hủy booking confirmed đã thanh toán trừ khi owner can thiệp |
 | EC-4 | **Booking vào quá khứ** | Controller chặn ngày `< today`; nếu người dùng cố tình sửa URL, hệ thống điều chỉnh về hôm nay |
 | EC-5 | **Khung giờ ngoài giờ mở cửa** | Chỉ cho chọn từ 05:00 đến 22:00 theo `open_time`/`close_time` của chi nhánh |
-| EC-6 | **Lỗi kết nối CSDL** | Wrap PDO vào try-catch, hiển thị trang lỗi 500 thân thiện, không rò râge stack trace |
+| EC-6 | **Lỗi kết nối CSDL** | Wrap PDO vào try-catch, hiển thị trang lỗi 500 thân thiện, không rò rỉ stack trace |
 | EC-7 | **CSRF / Session hijacking** | Thêm CSRF token vào tất cả form POST; session regeneration sau đăng nhập |
 | EC-8 | **SQL Injection** | Sử dụng prepared statements qua PDO trên tất cả truy vấn |
 

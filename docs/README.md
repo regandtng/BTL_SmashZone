@@ -5,6 +5,7 @@ Tất cả tài liệu thiết kế, báo cáo, hướng dẫn demo và phản b
 | File | Mô tả |
 |------|-------|
 | `PRD.md` | Yêu cầu sản phẩm, user stories Gherkin, edge cases |
+| `AI_SURVEY.md` | Tài liệu ghi lại cách dùng AI Agent khảo sát yêu cầu (vai trò PM, BA, Edge-Case Finder, Architect) |
 | `GIT_WORKFLOW.md` | Chiến lược nhánh, Pull Request, branch protection |
 | `TEST_REPORT.md` | Unit test, E2E Playwright, báo cáo coverage, OWASP, N+1 |
 | `OWASP_CHECKLIST.md` | Checklist bảo mật OWASP Top 10 |

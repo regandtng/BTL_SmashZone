@@ -6,19 +6,8 @@ require_once __DIR__ . '/bootstrap.php';
 
 use App\Models\Booking;
 
-$pass = 0;
-$fail = 0;
-
-function test($name, $condition) {
-    global $pass, $fail;
-    if ($condition) {
-        echo "  [PASS] $name\n";
-        $pass++;
-    } else {
-        echo "  [FAIL] $name\n";
-        $fail++;
-    }
-}
+require_once __DIR__ . '/helpers.php';
+test_reset();
 
 echo "--- BookingTest ---\n";
 
@@ -39,5 +28,6 @@ test('generateBookingCode đúng định dạng BB-YYYYMMDD-XXXXX', (bool) preg_
 $code2 = $booking->generateBookingCode();
 test('generateBookingCode tạo mã duy nhất (không trùng)', $code !== $code2);
 
-echo "\nKết quả: $pass passed, $fail failed\n";
-exit($fail > 0 ? 1 : 0);
+$r = test_results();
+echo "\nKết quả: {$r['pass']} passed, {$r['fail']} failed\n";
+exit($r['fail'] > 0 ? 1 : 0);

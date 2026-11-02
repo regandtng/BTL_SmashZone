@@ -1,12 +1,12 @@
 <?php
 // tests/run_tests.php
-// Chạy tất cả unit test và xuất báo cáo coverage đơn giản
+// Chạy tất cả unit test và xuất báo cáo tổng kết
 
 require_once __DIR__ . '/bootstrap.php';
 
 $tests = [
-    'BookingTest'   => __DIR__ . '/BookingTest.php',
-    'PricingRuleTest'=> __DIR__ . '/PricingRuleTest.php',
+    'BookingTest'      => __DIR__ . '/BookingTest.php',
+    'PricingRuleTest'  => __DIR__ . '/PricingRuleTest.php',
 ];
 
 $totalPass = 0;
@@ -23,24 +23,45 @@ foreach ($tests as $name => $path) {
         continue;
     }
     echo ">> Chạy $name\n";
-    ob_start();
-    include $path;
-    $output = ob_get_clean();
-    echo $output . "\n";
+    // Chạy mỗi file trong một tiến trình riêng để tránh redeclare hàm
+    $descriptorSpec = [
+        0 => ["pipe", "r"],
+        1 => ["pipe", "w"],
+        2 => ["pipe", "w"],
+    ];
+    $phpBin = defined('PHP_BINARY') ? PHP_BINARY : 'php';
+    $process = proc_open($phpBin . ' ' . escapeshellarg($path), $descriptorSpec, $pipes);
+    if (is_resource($process)) {
+        $stdout = stream_get_contents($pipes[1]);
+        $stderr = stream_get_contents($pipes[2]);
+        $exitCode = proc_close($process);
+        echo $stdout;
+        if ($stderr) {
+            echo "STDERR: $stderr\n";
+        }
+        // Parse pass/fail từ output
+        preg_match('/Kết quả: (\d+) passed, (\d+) failed/', $stdout, $m);
+        if (isset($m[1], $m[2])) {
+            $totalPass += (int)$m[1];
+            $totalFail += (int)$m[2];
+        }
+        echo "\n";
+    } else {
+        echo "[ERROR] Không thể chạy $path\n\n";
+    }
 }
 
-// Lấy pass/fail từ output là phức tạp, nên ta ước lượng qua exit code của từng file.
-// Ở đây chúng ta chỉ báo tổng thể.
 $endTime = microtime(true);
 $duration = round(($endTime - $startTime) * 1000, 2);
 
 echo "========================================\n";
-echo "  Báo cáo Coverage (Ước tính)\n";
+echo "  Tổng Kết\n";
 echo "========================================\n";
-echo "Files tested: " . count($tests) . "\n";
-echo "- app/Models/Booking.php: isSlotAvailable, generateBookingCode\n";
-echo "- app/Models/PricingRule.php: getPrice\n";
+echo "Tổng passed: $totalPass\n";
+echo "Tổng failed: $totalFail\n";
 echo "Thời gian chạy: ${duration}ms\n";
-echo "Lưu ý: Để có coverage chính xác, hãy cài Xdebug và chạy:\n";
+echo "\nLưu ý: Để có báo cáo coverage chính xác, hãy cài Xdebug và chạy:\n";
 echo "  php -d xdebug.mode=coverage tests/run_tests.php\n";
 echo "========================================\n";
+
+exit($totalFail > 0 ? 1 : 0);
