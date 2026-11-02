@@ -97,7 +97,7 @@ Danh sách câu hỏi thầy cô dễ hỏi khi bảo vệ, cùng câu trả l�
 
 ### Câu 13: Lịch sử commit và Git Workflow thế nào?
 **Trả lời:**
-- Repo đã có 31 commit trên `main` (không chỉ 1 commit ban đầu).
+- Repo đã có 32 commit trên `main` (không chỉ 1 commit ban đầu).
 - Đã tạo tài liệu `GIT_WORKFLOW.md` mô tả chiến lược nhánh (`main`, `feature/*`, `fix/*`), quy trình Pull Request review, branch protection.
 - Từ lúc nhận góp ý, mọi thay đổi mới được thực hiện trên nhánh `fix/*` và merge vào `main` qua Pull Request thật (chụp màn hình PR làm bằng chứng khi bảo vệ).
 - Quy ước commit message: `feat:`, `fix:`, `docs:` (áp dụng cho các commit mới).

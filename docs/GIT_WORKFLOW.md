@@ -39,7 +39,7 @@ Sử dụng **GitHub Flow** đơn giản, phù hợp dự án nhỏ và nhóm si
 4. **Mở Pull Request** trên GitHub/GitLab:
    - Base: `main`
    - Compare: `feature/ten-tinh-nang`
-   - Điền mô tả:目的, thay đổi, cách kiểm thử
+   - Điền mô tả: mục đích thay đổi, cách kiểm thử
 
 5. **Code Review** (ít nhất 1 người review):
    - Kiểm tra logic nghiệp vụ
@@ -85,4 +85,4 @@ git push origin fix/cron-schema
 
 ## 5. Lịch sử commit hiện tại (tham khảo)
 
-Repo hiện tại có 1 commit duy nhất trên `main`, chưa có nhánh feature nào được duy trì trên remote. Để chứng minh workflow khi bảo diện, cần tạo ít nhất 1 PR từ nhánh feature về `main` trước ngày kiểm tra.
+Repo hiện tại có 32 commit trên `main`. Có 3 nhánh feature trên remote (`feature/dat-san`, `feature/quan-tri-admin`, `feature/thanh-toan`), trong đó chỉ `feature/thanh-toan` là tổ tiên trực tiếp của `main` (được merge qua Git). Hai nhánh còn lại có thể đã được commit code thẳng vào `main` thay vì qua PR. Các commit mới nhất nằm trực tiếp trên `main` (không qua PR). Để chứng minh workflow khi bảo vệ, cần tạo ít nhất 1 PR từ nhánh `fix/*` về `main` trước ngày kiểm tra.

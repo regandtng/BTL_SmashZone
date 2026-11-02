@@ -9,6 +9,7 @@ use App\Models\Branch;
 use App\Models\PricingRule;
 use App\Models\Payment;
 use Core\Session;
+use PDO;
 
 class BookingController extends Controller
 {
@@ -214,7 +215,7 @@ class BookingController extends Controller
             ]);
 
             $pdo->commit();
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             $pdo->rollBack();
             Session::set('pending_booking', null);
             Session::flash('error', 'Có lỗi xảy ra khi đặt sân. Vui lòng thử lại.');
@@ -273,7 +274,7 @@ class BookingController extends Controller
 
         if (!$booking) {
             Session::flash('error', 'Không tìm thấy đặt sân.');
-            $this->redirect('/history');
+            $this->redirect('/booking/history');
         }
 
         // Kiểm tra quyền sở hữu: user chỉ xem được đơn của mình
