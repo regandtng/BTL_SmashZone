@@ -55,6 +55,7 @@
         <div class="modal-content glass-panel p-4" style="max-width:500px; border-radius:12px;">
             <h3 class="m-0 mb-3" style="font-size:1.1rem; font-weight:600;">Thêm Chi Nhánh Mới</h3>
             <form action="<?= BASE_URL ?>/owner/branch/store" method="POST">
+                <?= \Core\Session::csrfField() ?>
                 <div class="form-group mb-3">
                     <label class="form-label">Tên chi nhánh</label>
                     <input type="text" name="name" class="form-control" required placeholder="SmashZone Quận 1">
@@ -97,7 +98,9 @@
 <?php endif; ?>
 
 <?php if ($is_super): ?>
-    <form id="deleteBranchForm" action="<?= BASE_URL ?>/owner/branch/delete" method="POST" style="display:none;"></form>
+    <form id="deleteBranchForm" action="<?= BASE_URL ?>/owner/branch/delete" method="POST" style="display:none;">
+        <?= \Core\Session::csrfField() ?>
+    </form>
 <?php endif; ?>
 
 <style>

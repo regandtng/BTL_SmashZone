@@ -37,6 +37,7 @@
             <div class="card p-4">
                 <h3 class="h5 mb-3">Phương thức thanh toán</h3>
                 <form action="<?= BASE_URL ?>/payment/process" method="POST">
+                    <?= \Core\Session::csrfField() ?>
                     <input type="hidden" name="booking_id" value="<?= htmlspecialchars($booking['id'] ?? '') ?>">
                     <label>
                         <input type="radio" name="payment_method" value="qr" style="display:none;" required>

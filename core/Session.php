@@ -80,6 +80,16 @@ class Session
 
     public static function validateCsrfToken($token)
     {
-        return hash_equals(self::get('csrf_token', ''), $token);
+        $sessionToken = self::get('csrf_token', '');
+        if (empty($sessionToken) || empty($token)) {
+            return false;
+        }
+        return hash_equals($sessionToken, $token);
+    }
+
+    public static function csrfField()
+    {
+        self::generateCsrfToken();
+        return '<input type="hidden" name="csrf_token" value="' . htmlspecialchars(self::get('csrf_token')) . '">';
     }
 }

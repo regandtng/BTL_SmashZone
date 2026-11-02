@@ -52,6 +52,7 @@
                             <?php if ($is_super || !$r['branch_id']): ?>
                                 <a href="#" class="btn btn-outline-accent btn-sm" onclick="editPricing(<?= (int)($r['id']) ?>, '<?= htmlspecialchars($r['day_type']) ?>', '<?= htmlspecialchars($r['start_hour']) ?>', '<?= htmlspecialchars($r['end_hour']) ?>', <?= (float)($r['price_per_hour']) ?>, '<?= htmlspecialchars($r['label']) ?>')">Sửa</a>
                                 <form action="<?= BASE_URL ?>/owner/pricing/delete" method="POST" style="display:inline;" onsubmit="return confirm('Xóa quy giá này?')">
+                                    <?= \Core\Session::csrfField() ?>
                                     <input type="hidden" name="id" value="<?= (int)($r['id']) ?>">
                                     <button type="submit" class="btn btn-danger btn-sm ml-2">Xóa</button>
                                 </form>
@@ -72,6 +73,7 @@
         <div class="modal-content glass-panel p-4" style="max-width:520px; border-radius:12px;">
             <h3 class="m-0 mb-3" style="font-size:1.1rem; font-weight:600;">Thêm Quy Giá Mới</h3>
             <form action="<?= BASE_URL ?>/owner/pricing/store" method="POST">
+                <?= \Core\Session::csrfField() ?>
                 <div class="form-group mb-3">
                     <label class="form-label">Chi nhánh (để trống = toàn hệ thống)</label>
                     <select name="branch_id" class="form-control">

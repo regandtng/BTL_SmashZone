@@ -67,6 +67,7 @@
                         </td>
                         <td style="text-align:center;">
                             <form action="<?= BASE_URL ?>/owner/booking/update" method="POST" style="display:inline;" onsubmit="return confirm('Cập nhật trạng thái đặt sân này?')">
+                                <?= \Core\Session::csrfField() ?>
                                 <input type="hidden" name="booking_id" value="<?= (int)($b['id']) ?>">
                                 <input type="hidden" name="branch_id" value="<?= (int)($b['branch_id']) ?>">
                                 <select name="status" class="form-control" style="width:110px; font-size:0.8rem;" onchange="this.form.submit()">
