@@ -139,6 +139,8 @@ class BookingController extends Controller
             $this->redirect('/login');
         }
 
+        $this->csrfProtect();
+
         $pending = Session::get('pending_booking');
         if (!$pending) {
             $this->redirect('/branches');

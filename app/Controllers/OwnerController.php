@@ -24,8 +24,11 @@ class OwnerController extends Controller
         $ownerBranches = Session::get('owner_branches', []);
         if (!Session::get('owner_is_super') && !in_array($branchId, $ownerBranches)) {
             http_response_code(403);
-            Session::flash('error', 'Bạn không có quyền quản lý chi nhánh này.');
-            $this->redirect('/owner/dashboard');
+            $this->render('errors/403', [
+                'title'   => '403 - Không Có Quyền',
+                'message' => 'Bạn không có quyền quản lý chi nhánh này.'
+            ]);
+            exit;
         }
     }
 
@@ -174,6 +177,7 @@ class OwnerController extends Controller
     public function storeBranch()
     {
         $this->requireOwner();
+        $this->csrfProtect();
 
         $name     = trim($_POST['name'] ?? '');
         $address  = trim($_POST['address'] ?? '');
@@ -219,6 +223,7 @@ class OwnerController extends Controller
     public function updateBranch()
     {
         $this->requireOwner();
+        $this->csrfProtect();
 
         $id       = (int)($_POST['branch_id'] ?? 0);
         $name     = trim($_POST['name'] ?? '');
@@ -255,6 +260,7 @@ class OwnerController extends Controller
     public function deleteBranch()
     {
         $this->requireOwner();
+        $this->csrfProtect();
 
         $id = (int)($_POST['branch_id'] ?? 0);
         $this->requireBranchAccess($id);
@@ -342,6 +348,7 @@ class OwnerController extends Controller
     public function storeBooking()
     {
         $this->requireOwner();
+        $this->csrfProtect();
 
         $branchId = (int)($_POST['branch_id'] ?? 0);
         $courtId  = (int)($_POST['court_id'] ?? 0);
@@ -401,6 +408,7 @@ class OwnerController extends Controller
     public function updateBooking()
     {
         $this->requireOwner();
+        $this->csrfProtect();
 
         $id      = (int)($_POST['booking_id'] ?? 0);
         $status  = trim($_POST['status'] ?? '');
@@ -480,6 +488,7 @@ class OwnerController extends Controller
     public function storePricing()
     {
         $this->requireOwner();
+        $this->csrfProtect();
 
         $branchId = (int)($_POST['branch_id'] ?? 0);
         $dayType  = trim($_POST['day_type'] ?? 'all');
@@ -509,6 +518,7 @@ class OwnerController extends Controller
     public function updatePricing()
     {
         $this->requireOwner();
+        $this->csrfProtect();
 
         $id      = (int)($_POST['id'] ?? 0);
         $dayType = trim($_POST['day_type'] ?? 'all');
@@ -545,6 +555,7 @@ class OwnerController extends Controller
     public function deletePricing()
     {
         $this->requireOwner();
+        $this->csrfProtect();
 
         $id = (int)($_POST['id'] ?? 0);
         if ($id <= 0) {

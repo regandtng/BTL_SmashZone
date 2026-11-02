@@ -33,6 +33,7 @@ class AuthController extends Controller
         $user = $userModel->authenticate($login, $password);
 
         if ($user) {
+            session_regenerate_id(true);
             Session::set('user_id',   $user['id']);
             Session::set('user_name', $user['name']);
             Session::set('user_email', $user['email']);
@@ -49,6 +50,7 @@ class AuthController extends Controller
         )->fetch(\PDO::FETCH_ASSOC);
 
         if ($owner && password_verify($password, $owner['password'])) {
+            session_regenerate_id(true);
             Session::set('owner_id',       $owner['id']);
             Session::set('owner_name',     $owner['name']);
             Session::set('owner_is_super', $owner['is_super_admin']);

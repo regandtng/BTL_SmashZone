@@ -29,7 +29,8 @@
             <div class="card p-4">
                 <h3 class="h5 mb-3">Thông tin liên hệ</h3>
                 <form action="<?= BASE_URL ?>/booking/confirm" method="POST">
-                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf'] ?? '') ?>">
+                    <?php \Core\Session::generateCsrfToken(); ?>
+                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(\Core\Session::get('csrf_token')) ?>">
 
                     <div class="form-group">
                         <label class="form-label">Họ tên *</label>

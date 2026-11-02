@@ -57,6 +57,8 @@ class PaymentController extends Controller
     // POST /payment/process
     public function process()
     {
+        $this->csrfProtect();
+
         $bookingId = $_POST['booking_id'] ?? null;
         $method    = $_POST['payment_method'] ?? null;
 
