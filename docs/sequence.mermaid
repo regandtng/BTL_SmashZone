@@ -1,0 +1,57 @@
+sequenceDiagram
+    autonumber
+    participant KH as Khách hàng
+    participant BC as BookingController
+    participant BM as Booking Model
+    participant CM as Court Model
+    participant PM as Payment Model
+    participant DB as Database
+    participant CRON as Cron Job
+
+    KH->>BC: GET /booking/{courtId}?date=
+    BC->>CM: findById(courtId)
+    CM-->>BC: Trả về chi tiết sân
+    BC->>BM: getBookedSlots(courtId, date)
+    BM->>DB: SELECT ... WHERE court_id AND date
+    DB-->>BM: Danh sách giờ đã đặt
+    BM-->>BC: Trả về booked slots
+    BC-->>KH: Render trang chọn khung giờ (available/booked)
+
+    KH->>BC: POST /booking/store (court, date, hours)
+    BC->>BM: isSlotAvailable(courtId, date, start, end)
+    BM->>DB: Kiểm tra trùng lịch
+    DB-->>BM: True/False
+    BM-->>BC: Kết quả
+    alt Slot trống
+        BC->>Session: Lưu pending_booking
+        BC-->>KH: Redirect /booking/confirm
+        KH->>BC: POST /booking/confirm (thông tin khách hàng)
+        BC->>BM: isSlotAvailable (double-check)
+        BM-->>BC: Còn trống
+        BC->>BM: Tạo booking (status='pending', expires_at=+3p)
+        BM->>DB: INSERT bookings
+        DB-->>BM: bookingId
+        BC-->>KH: Redirect /payment/{bookingId}
+    else Slot đã bị đặt
+        BC-->>KH: Flash lỗi "Khung giờ đã được đặt"
+    end
+
+    KH->>BC: GET /payment/{bookingId}
+    BC->>BM: findById(bookingId)
+    alt Hết hạn 3 phút
+        BC->>BM: Cập nhật status='cancelled'
+        BC-->>KH: Flash lỗi "Quá hạn thanh toán"
+    else Còn hạn
+        BC-->>KH: Render form chọn phương thức thanh toán
+    end
+
+    KH->>BC: POST /payment/process (method: qr/momo/cash)
+    BC->>PM: Tạo payment record
+    PM->>DB: INSERT payments
+    BC->>BM: Cập nhật booking status='confirmed'
+    BM->>DB: UPDATE bookings
+    BC-->>KH: Redirect /booking/success/{bookingId}
+
+    CRON->>DB: --auto-complete (booking confirmed và end_time < NOW())
+    CRON->>DB: --clean-pending (pending và expires_at < NOW())
+    DB-->>CRON: Số bản ghi đã cập nhật
