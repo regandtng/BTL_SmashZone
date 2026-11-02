@@ -1,0 +1,10 @@
+{
+  "name": "smashzone-e2e",
+  "description": "Kịch bản E2E Playwright cho SmashZone",
+  "scripts": {
+    "test": "npx playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.40.0"
+  }
+}
