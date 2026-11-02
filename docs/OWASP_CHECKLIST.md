@@ -9,7 +9,8 @@
 - [x] `OwnerController::requireOwner()` — chặn truy cập nếu không phải owner
 - [x] `OwnerController::requireBranchAccess()` — owner chỉ xem chi nhánh mình sở hữu
 - [ ] Kiểm tra `BookingController::history` — cho phép tìm theo số điện thoại (có thể rò rỉ dữ liệu người khác)
-- [ ] Kiểm tra `PaymentController::show` — không kiểm tra xem booking có thuộc về user hiện tại không
+- [x] `PaymentController::show` — bắt đăng nhập + kiểm tra `user_id` sở hữu booking trước khi hiển thị
+- [x] `PaymentController::process` — bắt đăng nhập + kiểm tra `user_id` sở hữu booking trước khi cập nhật trạng thái
 
 ## 3. CSRF (Cross-Site Request Forgery)
 - [x] `Session::generateCsrfToken()` đã có sẵn trong `Core\Session`

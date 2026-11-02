@@ -13,6 +13,11 @@ class PaymentController extends Controller
     // GET /payment/{bookingId}
     public function show($bookingId)
     {
+        if (!Session::has('user_id')) {
+            Session::flash('error', 'Vui lòng đăng nhập để xem đơn đặt sân.');
+            $this->redirect('/login');
+        }
+
         $bookingModel = new Booking();
         $booking = $bookingModel->findById($bookingId);
 
@@ -21,8 +26,8 @@ class PaymentController extends Controller
             $this->redirect('/');
         }
 
-        // Kiểm tra quyền sở hữu: user đăng nhập chỉ xem được đơn của mình
-        if (Session::has('user_id') && (int)($booking['user_id'] ?? 0) !== (int)Session::get('user_id')) {
+        // Kiểm tra quyền sở hữu: user chỉ xem được đơn của mình
+        if ((int)($booking['user_id'] ?? 0) !== (int)Session::get('user_id')) {
             Session::flash('error', 'Bạn không có quyền xem đơn đặt sân này.');
             $this->redirect('/booking/history');
         }
@@ -63,6 +68,11 @@ class PaymentController extends Controller
     // POST /payment/process
     public function process()
     {
+        if (!Session::has('user_id')) {
+            Session::flash('error', 'Vui lòng đăng nhập trước khi thanh toán.');
+            $this->redirect('/login');
+        }
+
         $this->csrfProtect();
 
         $bookingId = $_POST['booking_id'] ?? null;
@@ -81,6 +91,12 @@ class PaymentController extends Controller
         if (!$booking) {
             Session::flash('error', 'Không tìm thấy đặt sân.');
             $this->redirect('/');
+        }
+
+        // Kiểm tra quyền sở hữu: user chỉ thanh toán được đơn của mình
+        if ((int)($booking['user_id'] ?? 0) !== (int)Session::get('user_id')) {
+            Session::flash('error', 'Bạn không có quyền thanh toán đơn này.');
+            $this->redirect('/booking/history');
         }
 
         // Kiểm tra booking pending đã hết hạn
