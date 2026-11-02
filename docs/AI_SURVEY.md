@@ -87,9 +87,9 @@ Hãy xuất mã Mermaid.js để có thể chỉnh sửa sau này.
 ### Ví dụ edge case từ AI đã đưa vào PRD
 - **EC-1 Trùng giờ đặt sân:** Hai người chọn cùng sân, cùng giờ gần đồng thời → double-check availability tại `processConfirm` trước khi insert. (Đã triển khai trong `BookingController::processConfirm`)
 - **EC-2 Hết hạn thanh toán (3 phút):** Cron `--clean-pending` chạy định kỳ; controller kiểm tra `expires_at` trước khi hiển thị trang thanh toán. (Đã triển khai trong `PaymentController::show`)
-- **EC-3 Hủy sân trước khi thanh toán:** Cho phép hủy booking pending, không cho hủy booking confirmed đã thanh toán trừ khi owner can thiệp. (Đã triển khai trong `OwnerController::updateBooking` và `PaymentController`)
+- **EC-3 Hủy sân trước khi thanh toán:** Cho phép hủy booking pending, không cho hủy booking confirmed đã thanh toán trừ khi owner can thiệp. (Một phần: chỉ owner có thể cập nhật trạng thái, khách chưa có chức năng tự hủy đơn)
 - **EC-4 Booking vào quá khứ:** Controller chặn ngày `< today`; điều chỉnh về hôm nay nếu người dùng sửa URL. (Đã triển khai trong `BookingController::create`)
-- **EC-7 CSRF / Session hijacking:** Thêm CSRF token vào tất cả form POST; session regeneration sau đăng nhập. (Đã triển khai `Session::csrfField()`, `session_regenerate_id(true)`)
+- **EC-7 CSRF / Session hijacking:** Thêm CSRF token vào tất cả form POST; session regeneration sau đăng nhập. (Một phần: đã thêm vào form xác nhận đặt sân, thanh toán, và các controller owner; form login/register/profile chưa có token)
 
 ### Quyết định của nhóm sau khi khảo sát AI
 | Ý kiến AI ban đầu | Quyết định của nhóm | Lý do |

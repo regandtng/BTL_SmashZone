@@ -85,4 +85,4 @@ git push origin fix/cron-schema
 
 ## 5. Lịch sử commit hiện tại (tham khảo)
 
-Repo hiện tại có 1 commit duy nhất trên `main`, chưa có nhánh feature nào được duy trì trên remote. Để chứng minh workflow khi bảo diện, cần tạo ít nhất 1 PR từ nhánh feature về `main` trước ngày kiểm tra.
+Repo hiện tại có 32 commit trên `main`, cùng với 3 nhánh feature (`feature/dat-san`, `feature/quan-tri-admin`, `feature/thanh-toan`) đã được merge về `main`. Các commit mới nhất nằm trực tiếp trên `main` (không qua PR). Để chứng minh workflow khi bảo vệ, cần tạo ít nhất 1 PR từ nhánh `fix/*` về `main` trước ngày kiểm tra.
