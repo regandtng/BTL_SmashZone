@@ -109,31 +109,25 @@ class OwnerController extends Controller
             }
         }
 
+        $branchIds = array_column($branchRows, 'id');
+        $statsModel = new Booking();
+        $statsMap   = $statsModel->getDashboardStats($branchIds);
+
         $totalBookings = 0;
         $totalRevenue  = 0;
         $todayBookings = 0;
+        foreach ($branchRows as &$branch) {
+            $bid = (int)$branch['id'];
+            $s   = $statsMap[$bid] ?? ['total_bookings'=>0, 'total_revenue'=>0, 'today_bookings'=>0];
+            $branch['total_bookings'] = $s['total_bookings'];
+            $branch['total_revenue']  = $s['total_revenue'];
+            $branch['today_bookings'] = $s['today_bookings'];
 
-        foreach ($branchRows as $branch) {
-            $bid = $branch['id'];
-            $cnt = $db->query(
-                "SELECT COUNT(*) FROM bookings WHERE branch_id = ?",
-                [$bid]
-            )->fetchColumn();
-            $totalBookings += (int)$cnt;
-
-            $rev = $db->query(
-                "SELECT COALESCE(SUM(total_price), 0) FROM bookings WHERE branch_id = ? AND status = 'confirmed'",
-                [$bid]
-            )->fetchColumn();
-            $totalRevenue += (float)$rev;
-
-            $today = date('Y-m-d');
-            $todayCnt = $db->query(
-                "SELECT COUNT(*) FROM bookings WHERE branch_id = ? AND booking_date = ?",
-                [$bid, $today]
-            )->fetchColumn();
-            $todayBookings += (int)$todayCnt;
+            $totalBookings += $s['total_bookings'];
+            $totalRevenue  += $s['total_revenue'];
+            $todayBookings += $s['today_bookings'];
         }
+        unset($branch);
 
         $this->render('owner/dashboard', [
             'title'         => 'Dashboard Quản Trị - SmashZone',
