@@ -29,6 +29,23 @@ Trang khách dùng `app/Views/layouts/main.php`; khu vực quản trị dùng `a
 - Trang khách hàng dùng layout chính và `public/assets/css/style.css` (nền sáng, token như `--bg-primary`, `--accent`, `--accent-hover`).
 - Trang owner dùng `public/assets/css/admin.css` cùng layout quản trị tối. Không dùng token riêng của admin trong trang khách.
 - Tái sử dụng token hiện có thay vì thêm màu hard-code mới khi đã có token tương ứng.
+- Trước khi thêm style, tìm component/token hiện có; ưu tiên class theo component/trang, tránh selector rộng, độ ưu tiên CSS tăng dần và `!important` không cần thiết.
+- Khi sửa selector, layout hoặc script dùng chung, tìm tất cả caller và kiểm tra một màn hình đại diện cho mỗi khu vực bị ảnh hưởng.
+
+## JavaScript và tích hợp dữ liệu
+
+- Kiểm tra script và listener hiện có trước khi thêm handler; tránh bind lặp, giữ state hiển thị đồng bộ với field gửi backend và dùng event delegation khi phần tử được tạo động.
+- Với request bất đồng bộ, xử lý trạng thái loading, lỗi validation/server, lỗi mạng/response không hợp lệ và success theo khả năng thực tế của luồng. Ngăn gửi lặp khi cần, giữ dữ liệu người dùng khi lỗi và không báo thành công trước response thành công.
+- Nếu có thể đổi bộ lọc/lựa chọn khi request trước chưa xong, ngăn kết quả cũ ghi đè state mới. Không dùng `setTimeout()` tùy tiện để đồng bộ giao diện.
+- Phân biệt API trả danh sách rỗng với request thất bại; không biến lỗi thành dữ liệu rỗng hoặc mock fallback. Frontend không được tự quyết định quyền truy cập, giá cuối cùng, khả dụng sân hay trạng thái thanh toán.
+- Xem route/controller/response hiện hành trước khi dùng field, status code hoặc endpoint; không đoán response shape.
+
+## Accessibility và responsive
+
+- Dùng phần tử HTML ngữ nghĩa trước khi thêm ARIA; gắn `label` với input, giữ focus dễ thấy, hỗ trợ keyboard và hiển thị lỗi gần trường liên quan khi phù hợp.
+- Nút hành động dùng `<button>`, điều hướng dùng `<a>`. Không dựa chỉ vào màu để truyền trạng thái; bảo đảm tên nút/ảnh và nội dung lỗi có ý nghĩa.
+- Kiểm tra giao diện ở viewport rộng 375px: không tràn ngang, nội dung/nút không bị cắt, form vẫn dùng được. Nếu thay đổi ảnh hưởng bố cục đáng kể, kiểm tra thêm tablet/desktop theo breakpoint hiện có.
+- Với modal, kiểm tra đóng/mở bằng keyboard, focus và tương tác nền; không tạo modal khi hiển thị inline đơn giản hơn.
 
 ## Trạng thái tương tác
 

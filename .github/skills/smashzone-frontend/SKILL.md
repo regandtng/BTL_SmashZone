@@ -1,39 +1,41 @@
 ---
 name: smashzone-frontend
-description: "Dùng khi xây dựng, cập nhật hoặc sửa lỗi giao diện SmashZone: PHP view, HTML, CSS, JavaScript, responsive, biểu mẫu và tương tác trình duyệt trong dự án PHP MVC này."
+description: "Dùng khi xây dựng, cập nhật hoặc sửa lỗi giao diện SmashZone: PHP view, HTML, CSS, JavaScript, responsive, accessibility, biểu mẫu và tương tác trình duyệt trong dự án PHP MVC này."
 ---
 
 # Giao diện SmashZone
 
-Triển khai thay đổi giao diện trong ứng dụng PHP MVC hiện có, không làm lệch thiết kế hoặc phá vỡ luồng render phía máy chủ.
+Triển khai thay đổi giao diện trong ứng dụng PHP MVC hiện có, giữ nguyên hợp đồng backend và nhận diện khách/owner. Không biến kiểm tra phía trình duyệt thành nguồn quyết định nghiệp vụ.
 
 ## Quy trình
 
-1. Xác định trang/tương tác cần đổi và hành vi cần giữ nguyên. Kiểm tra view, layout, CSS/JavaScript, route và dữ liệu controller liên quan; xem trạng thái git để không ghi đè thay đổi có sẵn.
-2. Khoanh vùng CSS/JS theo component hoặc trang. Ưu tiên class/phạm vi riêng thay vì sửa selector toàn cục hoặc layout dùng chung; không thay đổi trang khác hay refactor không liên quan. Nếu cần đụng stylesheet/layout toàn cục, kiểm tra các màn hình cùng dùng nó.
-3. Dùng [bản đồ trang và hợp đồng view](./references/ui-patterns.md) để tìm đúng view, layout, route, field và selector trước khi sửa. Xác minh lại với code hiện tại vì bảng này mô tả code có thể thay đổi.
-4. Đảm bảo đầu ra PHP an toàn: escape nội dung người dùng/cơ sở dữ liệu bằng `htmlspecialchars()`. Layout chính hiện render nội dung flash lỗi thô để hỗ trợ `<br>`; không truyền nội dung người dùng vào flash HTML. Tái sử dụng `BASE_URL`.
-5. Tất cả form `method="POST"` phải có `<?= \Core\Session::csrfField() ?>` và khớp tên trường/route controller. Kiểm tra handler gọi `csrfProtect()`; nếu thiếu, bổ sung cả hai phía trong phạm vi cần thiết và kiểm tra CSRF không làm hỏng luồng hiện tại.
-6. Mỗi trạng thái **Loading, Error, Empty, Success** chỉ cần triển khai nếu luồng thực tế có thể đi tới trạng thái đó; xác định nguồn dữ liệu và hành động hồi phục cho từng trạng thái. Không thêm trạng thái giả chỉ để đủ checklist.
-7. Không thay dữ liệu thật từ controller bằng dữ liệu giả hoặc chuyển nghiệp vụ sang JavaScript trên trình duyệt. Nếu chức năng cần sửa backend, hãy cập nhật cả phần backend liên quan và theo skill backend.
-8. Kiểm tra luồng bị ảnh hưởng và ít nhất các màn hình liền kề dùng chung CSS/layout ở viewport phù hợp. Chạy bài test trình duyệt tập trung trước; nếu sửa tài nguyên dùng chung, mở rộng kiểm tra hồi quy. Nêu rõ những kiểm tra không chạy được và lý do.
+1. **Khoanh vùng:** xác định trang, hành vi cần đổi, hành vi cần giữ, layout, controller/route và dữ liệu view. Kiểm tra trạng thái git, view, CSS/JS liên quan và các consumer dùng chung trước khi sửa.
+2. **Lần theo luồng:** kiểm tra render PHP → DOM/field/selector → JavaScript event/state → route/controller/response. Dùng [bản đồ trang và hợp đồng view](./references/ui-patterns.md) làm chỉ dẫn, sau đó xác minh với code thực tế.
+3. **Giữ hợp đồng:** bảo toàn URL, method, tên input, giá trị status/phương thức thanh toán, selector đang được JS hoặc test sử dụng và dữ liệu do controller cung cấp. Nếu yêu cầu cần đổi hợp đồng hay nghiệp vụ backend, cập nhật cả hai phía và theo skill backend.
+4. **Triển khai đúng phạm vi:** ưu tiên CSS theo component/trang và JavaScript theo cấu trúc hiện có. Trước khi sửa layout, selector global hoặc tài nguyên dùng chung, xác định các màn hình bị ảnh hưởng. Không thêm framework/build pipeline hoặc dependency frontend nếu chưa được yêu cầu.
+5. **Xử lý an toàn:** escape dữ liệu động trong HTML bằng `htmlspecialchars($value, ENT_QUOTES, 'UTF-8')`; tái sử dụng `BASE_URL`. Không đưa dữ liệu người dùng/DB vào flash HTML thô. Mọi form POST có `<?= \Core\Session::csrfField() ?>` và route POST phải kiểm tra CSRF; sửa cả view lẫn action nếu thiếu và nằm trong phạm vi.
+6. **Xử lý trạng thái:** với tương tác thực tế có thể tải, thất bại, không có dữ liệu hoặc thành công, hiển thị trạng thái phù hợp. Lỗi phải giữ dữ liệu người dùng và có cách phục hồi khi hợp lý; chỉ báo thành công sau xác nhận từ server. Ngăn gửi lặp khi phù hợp.
+7. **Kiểm chứng:** chạy test trình duyệt/E2E tập trung nếu môi trường sẵn sàng; xác minh luồng chính, lỗi/biên liên quan và các consumer của CSS/JS dùng chung. Kiểm tra responsive ở 375px và viewport khác nếu bố cục bị ảnh hưởng; kiểm tra keyboard/focus và label khi có tương tác/form liên quan. Phân biệt rõ đã xem code, đã chạy test và đã quan sát trình duyệt.
+8. **Rà soát:** xem diff, xác nhận không có dữ liệu mock che lỗi, nghiệp vụ chuyển sang frontend hay thay đổi ngoài phạm vi. Nêu command, kết quả và giới hạn kiểm chứng; không khẳng định visual/browser verification nếu chưa thực hiện.
 
 ## Quy ước dự án
 
-- View là các mẫu PHP trong `app/Views/`, được controller render thông qua `Core\Controller::render()`.
-- Tài nguyên giao diện dùng chung nằm trong `public/assets/`.
-- Ứng dụng dùng PHP và không có quy trình build frontend. Đảm bảo thay đổi tương thích với CSS và JavaScript thuần hiện có.
-- Tôn trọng design token trong `public/assets/css/style.css` (giao diện khách sáng) và `public/assets/css/admin.css` (giao diện quản trị tối); đừng trộn hai bộ màu.
-- Kiểm tra layout ở viewport rộng 375px; bảo đảm không tràn ngang, form và nút vẫn thao tác được.
-- Nội dung hiển thị cho người dùng nên dùng tiếng Việt để thống nhất với trang hiện tại.
+- View nằm trong `app/Views/`, controller render qua `Core\Controller::render()`, tài nguyên tĩnh nằm trong `public/assets/`.
+- Ứng dụng dùng PHP và CSS/JavaScript thuần, không có frontend build pipeline.
+- Khu vực khách dùng `app/Views/layouts/main.php` và `public/assets/css/style.css` (giao diện sáng); owner dùng `app/Views/layouts/admin.php` và `public/assets/css/admin.css` (giao diện tối). Không trộn design token giữa hai khu vực.
+- Dùng HTML ngữ nghĩa: link cho điều hướng, button cho hành động, label gắn với input, heading theo thứ bậc và thông báo lỗi có thể nhận biết/đọc bằng công nghệ hỗ trợ.
+- JavaScript phải xử lý rõ loading, validation/server error, network/unexpected response và success khi các trạng thái đó áp dụng. Không nuốt lỗi, giả response, dùng `setTimeout()` để che race hoặc cho response cũ ghi đè state mới.
+- Không thay dữ liệu thật từ controller bằng mock/fallback giả để che lỗi; giữ đúng empty state và phân biệt lỗi tải dữ liệu với kết quả rỗng.
+- Nội dung hiển thị cho người dùng nên dùng tiếng Việt thống nhất với giao diện hiện tại.
 
 ## Checklist trước khi hoàn tất
 
-- [ ] Đã giữ đúng layout, stylesheet và design token cho khu vực khách/owner.
-- [ ] Mọi form POST có CSRF field, route và tên input khớp controller.
+- [ ] Đã kiểm tra view, controller/route, CSS/JS và consumer dùng chung liên quan.
+- [ ] Đã giữ đúng layout, design token, route, field, selector và giá trị contract.
+- [ ] Form POST có CSRF field; action POST có kiểm tra CSRF.
 - [ ] Dữ liệu động được escape; không đưa nội dung không tin cậy vào flash HTML.
-- [ ] Trạng thái Loading, Error, Empty, Success được xử lý phù hợp với luồng.
-- [ ] Đã kiểm tra responsive ở 375px và chạy kiểm tra/test giao diện liên quan.
-- [ ] CSS/JS chỉ tác động phạm vi dự kiến; đã kiểm tra màn hình khác nếu dùng chung layout/tài nguyên.
-- [ ] Đã xác minh DOM selector và hợp đồng field thực tế; không dựa vào selector trong test cũ chưa được kiểm chứng.
-- [ ] Diff không chứa chỉnh sửa giao diện hoặc refactor ngoài yêu cầu.
+- [ ] Loading/error/empty/success và phục hồi sau lỗi được xử lý theo luồng thực tế.
+- [ ] Không gửi lặp hoặc hiển thị thành công trước xác nhận của server khi tương tác có rủi ro đó.
+- [ ] Đã kiểm tra responsive, keyboard/focus và trang dùng chung khi phù hợp.
+- [ ] Đã chạy kiểm tra liên quan hoặc ghi rõ phần không thể chạy; không mô tả kiểm tra chưa chạy là đạt.
+- [ ] Diff chỉ gồm thay đổi cần thiết, không có mock hoặc nghiệp vụ frontend ngoài yêu cầu.
