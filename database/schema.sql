@@ -49,10 +49,11 @@ CREATE TABLE bookings (
     end_time TIME NOT NULL,
     duration_hours DECIMAL(4,2) NOT NULL,
     total_price DECIMAL(10,2) NOT NULL,
-    status ENUM('pending', 'confirmed', 'cancelled') DEFAULT 'pending',
+    status ENUM('pending', 'confirmed', 'cancelled', 'completed') DEFAULT 'pending',
     expires_at TIMESTAMP NULL DEFAULT NULL,
     notes TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    completed_at TIMESTAMP NULL DEFAULT NULL,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
     FOREIGN KEY (court_id) REFERENCES courts(id) ON DELETE CASCADE,
     FOREIGN KEY (branch_id) REFERENCES branches(id) ON DELETE CASCADE
