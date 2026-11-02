@@ -5,18 +5,29 @@ description: "Dùng khi triển khai, mở rộng hoặc sửa lỗi backend Sma
 
 # Backend SmashZone
 
-Triển khai thay đổi backend theo kiến trúc PHP MVC của SmashZone, đồng thời giữ nguyên các route, hợp đồng dữ liệu và quy tắc đặt sân hiện có.
+Thực hiện thay đổi backend có phạm vi rõ ràng, bảo toàn hợp đồng và nghiệp vụ SmashZone, đồng thời kiểm chứng độc lập quyền truy cập, dữ liệu, transaction và tác động phụ.
 
-## Quy trình
+## Quy trình bắt buộc
 
-1. Trước khi sửa, lần theo luồng chức năng qua `routes/web.php`, controller, model, view, helper trong `core/` và `database/schema.sql` có liên quan.
-2. Làm theo cấu trúc controller/model hiện có và dùng kết nối `Core\Database`/PDO dùng chung. Giữ cú pháp PHP tương thích với phiên bản tối thiểu PHP 7.4 được ghi trong tài liệu dự án.
-3. Xác thực dữ liệu yêu cầu ở phía máy chủ. Dùng prepared statement cho các giá trị; tuyệt đối không nối dữ liệu không đáng tin cậy trực tiếp vào câu SQL.
-4. Giữ đúng ranh giới phân quyền: phân biệt session khách hàng và chủ sân; giới hạn dữ liệu chủ sân trong các chi nhánh họ quản lý.
-5. Bảo vệ các luồng POST làm thay đổi dữ liệu bằng cơ chế CSRF hiện có khi phù hợp. Không làm yếu xác thực hoặc phân quyền chỉ để luồng chạy được.
-6. Khi sửa đặt sân hoặc thanh toán, giữ các chuyển trạng thái hợp lệ, quy tắc hết hạn và kiểm tra giờ bị chồng lấn. Dùng transaction và kiểm tra lại tình trạng sân khi có thể xảy ra yêu cầu đồng thời đặt cùng một khung giờ.
-7. Nếu cần đổi schema, cập nhật `database/schema.sql` cùng mọi truy vấn và thành phần sử dụng bị ảnh hưởng. Xử lý lỗi rõ ràng; không che giấu lỗi cơ sở dữ liệu hoặc xác thực bằng phản hồi báo thành công.
-8. Thêm hoặc cập nhật test phù hợp và chạy bước kiểm tra hẹp nhất liên quan. Tóm tắt thay đổi và kết quả kiểm thử.
+1. **Khoanh vùng:** ghi nhận hành vi cần sửa, hành vi ngoài phạm vi phải giữ nguyên và trạng thái git. Không ghi đè hoặc dọn thay đổi có sẵn.
+2. **Lập chuỗi phụ thuộc trước khi sửa:** mô tả ngắn theo dạng `route → action → model/SQL → session/DB state → view/API/cron/consumer`. Theo dõi cả đường thành công, lỗi, hết hạn và tác vụ nền liên quan. Dùng [phân tích tác động](./references/change-impact.md).
+3. **Đọc đúng tài liệu tham chiếu:** chọn tài liệu theo nghiệp vụ ở bảng bên dưới; chỉ đọc thêm khi luồng cắt qua nhiều miền. Đây là hướng dẫn để lần theo code, không thay thế việc xác minh hành vi code thực tế.
+
+| Công việc | Đọc trước |
+|---|---|
+| MVC, PDO, thay đổi backend nói chung | [backend-patterns.md](./references/backend-patterns.md) |
+| Chọn sân, giữ slot, hết hạn, lịch sử | [booking-workflow.md](./references/booking-workflow.md) |
+| Tạo payment, xác nhận, callback/gateway | [payment-workflow.md](./references/payment-workflow.md) |
+| Khách hàng, owner, quyền truy cập bản ghi | [authorization.md](./references/authorization.md) |
+| Race condition, transaction, lock/schema | [database-transactions.md](./references/database-transactions.md) |
+| Chạm nhiều caller, refactor, regression/scope | [change-impact.md](./references/change-impact.md) |
+
+4. **Quyết định phạm vi:** ưu tiên thay đổi nhỏ tại đúng lớp và giữ URL, tên field, session key, status, response cùng nghiệp vụ hiện có. Không tự đổi chính sách thanh toán, chuyển trạng thái, schema, chiến lược khóa hoặc quyền truy cập. Hỏi người dùng trước nếu yêu cầu còn mơ hồ hoặc giải pháp buộc phải thay đổi các hợp đồng/chính sách đó.
+5. **Triển khai theo quy ước repo:** PHP tối thiểu 8.0 (Docker PHP 8.2); validate phía server; prepared statements cho giá trị; whitelist cho tên cột động; mọi action POST gọi `csrfProtect()` và mọi form POST có `<?= \Core\Session::csrfField() ?>`. Xem [backend-patterns.md](./references/backend-patterns.md).
+6. **Kiểm chứng độc lập sau khi sửa:** lần lượt rà SQL/kiểu dữ liệu; quyền trên từng đường đọc/ghi; transaction và race condition; thay đổi status/side effect; các caller trong chuỗi phụ thuộc. Không kết luận an toàn chỉ vì trang chính hoạt động hoặc test đơn vị xanh.
+7. **Kiểm thử:** chạy test đích trước, rồi regression test cho các consumer liên quan. Không chạy test ghi/xóa dữ liệu nếu DB đích không phải database test riêng đã xác minh. Nêu rõ command, output, giới hạn và test chưa chạy.
+8. **Cập nhật kiến thức dự án:** chỉ sửa reference/PRD/ERD/OpenAPI khi quy tắc lâu dài, schema, route hoặc hợp đồng API thực sự thay đổi; không biến một fix cục bộ thành tuyên bố nghiệp vụ mới. Cập nhật reference khi code đã xác minh khác hướng dẫn.
+9. **Rà diff và báo cáo:** loại bỏ thay đổi ngoài yêu cầu; nêu file/phạm vi, hành vi được giữ, kiểm tra đã chạy và rủi ro còn lại. Không che lỗi DB/xác thực bằng phản hồi thành công.
 
 ## Cấu trúc dự án
 
@@ -33,3 +44,15 @@ Triển khai thay đổi backend theo kiến trúc PHP MVC của SmashZone, đ�
 - Không để lộ thông tin đăng nhập, giá trị session hoặc dữ liệu nhạy cảm của khách hàng trong phản hồi hay log.
 - Không chạy thao tác phá hủy dữ liệu trên cơ sở dữ liệu chưa rõ môi trường hoặc cơ sở dữ liệu production.
 - Giữ quy tắc nghiệp vụ ở backend; kiểm tra phía client không thể thay thế xác thực phía máy chủ.
+
+## Checklist trước khi hoàn tất
+
+- [ ] Đã lập và kiểm tra chuỗi phụ thuộc từ route tới mọi consumer/side effect liên quan.
+- [ ] Giải pháp không âm thầm đổi chính sách booking/payment, schema, API hoặc quyền truy cập; thay đổi đáng kể đã được xác nhận.
+- [ ] Đã kiểm tra quyền sở hữu booking theo session, kể cả với endpoint chỉ đọc.
+- [ ] Mọi POST action có `csrfProtect()` và mọi form POST có `csrfField()`.
+- [ ] SQL dùng prepared statement cho giá trị và whitelist cho tên cột động.
+- [ ] Đã rà riêng SQL, authorization, transaction/concurrency và side effects/status transition.
+- [ ] Đã rà soát N+1 và cập nhật ERD/OpenAPI nếu schema/route/hợp đồng thay đổi.
+- [ ] Diff chỉ chứa thay đổi cần cho yêu cầu; đã kiểm tra các hành vi liền kề và không có refactor ngoài phạm vi.
+- [ ] Đã chạy test phù hợp hoặc nêu rõ lý do không chạy; không báo test chưa chạy là đạt.

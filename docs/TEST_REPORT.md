@@ -1,5 +1,7 @@
 # Báo cáo Kiểm thử & Đảm bảo Chất lượng — SmashZone
 
+> **Tình trạng:** Output ở mục 3 là kết quả lịch sử, được ghi trước khi bổ sung test thời hạn booking và cô lập database test. Database `badminton_booking_test` chưa được cấu hình trong môi trường hiện tại, nên bộ test chưa được chạy lại trên phiên bản hiện tại. Không xem các số liệu lịch sử dưới đây là kết quả mới nhất.
+
 ## 1. Unit Test
 
 | File test | Lớp kiểm thử | Phương thức | Kết quả |
@@ -47,7 +49,7 @@ Cấu hình `BASE_URL` qua biến môi trường nếu cần:
 BASE_URL=http://localhost/BTL_SmashZone npx playwright test
 ```
 
-## 3. Báo cáo Coverage (Kết quả thực)
+## 3. Báo cáo Coverage (Output lịch sử)
 
 Chạy toàn bộ unit test qua `tests/run_tests.php` (môi trường XAMPP PHP 8.2, MySQL có dữ liệu mẫu từ `schema.sql`):
 
