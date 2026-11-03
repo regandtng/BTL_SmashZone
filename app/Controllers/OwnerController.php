@@ -476,6 +476,7 @@ class OwnerController extends Controller
             'rules'   => $rules,
             'branches'=> $branches,
             'branch_id'=> $branchId,
+            'is_super' => (bool) Session::get('owner_is_super'),
         ]);
     }
 
