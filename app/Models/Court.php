@@ -14,16 +14,19 @@ class Court extends Model {
     }
 
     public function findAvailable($branchId, $date, $startTime, $endTime) {
+        $startTimeStr = sprintf('%02d:00:00', $startTime);
+        $endTimeStr   = sprintf('%02d:00:00', $endTime);
         $stmt = $this->db->prepare("
             SELECT * FROM {$this->table} 
             WHERE branch_id = ? AND status = 'active' 
             AND id NOT IN (
                 SELECT court_id FROM bookings 
                 WHERE branch_id = ? AND booking_date = ? AND status IN ('pending', 'confirmed')
+                AND (status = 'confirmed' OR expires_at IS NULL OR expires_at > NOW())
                 AND ((start_time < ? AND end_time > ?) OR (start_time >= ? AND start_time < ?))
             )
         ");
-        $stmt->execute([$branchId, $branchId, $date, $endTime, $startTime, $startTime, $endTime]);
+        $stmt->execute([$branchId, $branchId, $date, $endTimeStr, $startTimeStr, $startTimeStr, $endTimeStr]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
@@ -39,6 +42,7 @@ class Court extends Model {
             SELECT court_id, start_time, end_time 
             FROM bookings 
             WHERE branch_id = ? AND booking_date = ? AND status IN ('pending', 'confirmed')
+            AND (status = 'confirmed' OR expires_at IS NULL OR expires_at > NOW())
         ");
         $stmt->execute([$branchId, $date]);
         $bookings = $stmt->fetchAll(PDO::FETCH_ASSOC);

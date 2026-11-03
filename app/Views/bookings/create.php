@@ -22,7 +22,7 @@
             
             <div class="d-flex align-items-center gap-3 mb-4 p-3 bg-light rounded-3 border" style="border-color: #cbd5e1 !important;">
                 <label for="booking_date" class="font-weight-600 text-dark m-0">Ngày đặt sân:</label>
-                <input type="date" id="booking_date" class="form-control" min="<?= date('Y-m-d') ?>" value="<?= date('Y-m-d') ?>" style="max-width: 180px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-weight: 600; padding: 0.4rem 0.8rem; color: #0f172a;">
+                <input type="date" id="booking_date" class="form-control" min="<?= date('Y-m-d') ?>" value="<?= htmlspecialchars($date ?? date('Y-m-d')) ?>" style="max-width: 180px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-weight: 600; padding: 0.4rem 0.8rem; color: #0f172a;">
             </div>
             
             <div class="slot-legend d-flex gap-4 mb-3 fs-sm">
@@ -59,7 +59,7 @@
             <div class="summary-details mb-4">
                 <div class="summary-row"><span class="text-muted">Chi nhánh:</span> <strong class="text-dark"><?= htmlspecialchars($branchName ?? 'Chi nhánh') ?></strong></div>
                 <div class="summary-row"><span class="text-muted">Sân:</span> <strong class="text-accent"><?= htmlspecialchars($courtName ?? 'Sân') ?></strong></div>
-                <div class="summary-row"><span class="text-muted">Ngày đặt:</span> <strong id="summary-date" class="text-dark"><?= date('d/m/Y') ?></strong></div>
+                <div class="summary-row"><span class="text-muted">Ngày đặt:</span> <strong id="summary-date" class="text-dark"><?= date('d/m/Y', strtotime($date ?? 'today')) ?></strong></div>
                 <div class="summary-row"><span class="text-muted">Khung giờ:</span> <strong id="summary-time" class="text-dark" style="font-size: 1.05rem;">--:--</strong></div>
                 <div class="summary-row"><span class="text-muted">Thời lượng:</span> <strong id="summary-duration" class="text-dark">0</strong> giờ</div>
             </div>
@@ -71,7 +71,7 @@
 
             <form action="<?= BASE_URL ?>/booking/store" method="POST" id="booking-form">
                 <input type="hidden" name="court_id" value="<?= $courtId ?? 1 ?>">
-                <input type="hidden" name="booking_date" id="form_booking_date" value="<?= date('Y-m-d') ?>">
+                <input type="hidden" name="booking_date" id="form_booking_date" value="<?= htmlspecialchars($date ?? date('Y-m-d')) ?>">
                 <input type="hidden" name="start_hour" id="form_start_hour" value="">
                 <input type="hidden" name="end_hour" id="form_end_hour" value="">
                 <button type="submit" class="btn btn-accent w-100 py-3 font-weight-700" id="btn-submit" disabled style="opacity: 0.5;">
@@ -111,8 +111,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const timeSlots = document.querySelectorAll('.time-slot:not(.disabled)');
 
     dateInput.addEventListener('change', function() {
-        document.getElementById('summary-date').textContent = new Date(this.value).toLocaleDateString('vi-VN');
-        document.getElementById('form_booking_date').value = this.value;
+        const url = new URL(window.location.href);
+        url.searchParams.set('date', this.value);
+        window.location.href = url.toString();
     });
 
     timeSlots.forEach(slot => {

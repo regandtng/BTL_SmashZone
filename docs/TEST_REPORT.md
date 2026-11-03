@@ -1,127 +1,226 @@
 # Báo cáo Kiểm thử & Đảm bảo Chất lượng — SmashZone
 
-> **Tình trạng:** Output ở mục 3 là kết quả lịch sử, được ghi trước khi bổ sung test thời hạn booking và cô lập database test. Database `badminton_booking_test` chưa được cấu hình trong môi trường hiện tại, nên bộ test chưa được chạy lại trên phiên bản hiện tại. Không xem các số liệu lịch sử dưới đây là kết quả mới nhất.
+> **Trạng thái (cập nhật 2026-11-03):** Unit test **76/76 passed**, E2E Playwright **9/9 passed**.
+> Môi trường chạy: XAMPP PHP 8.1.25, MariaDB 10.4.32, Node 24.21.0, Playwright 1.64.1.
+> Unit test dùng database riêng `badminton_booking_test`; không dùng database ứng dụng.
 
-## 1. Unit Test
+## 1. Cách chạy kiểm thử
 
-| File test | Lớp kiểm thử | Phương thức | Kết quả |
-|-----------|--------------|-------------|---------|
-| `tests/BookingTest.php` | `App\Models\Booking` | `isSlotAvailable`, `generateBookingCode` | 3/3 passed |
-| `tests/PricingRuleTest.php` | `App\Models\PricingRule` | `getPrice` | 4/4 passed |
+### 1.1. Chuẩn bị database test
 
-### Cách chạy
+`tests/bootstrap.php` luôn ép `DB_DATABASE=badminton_booking_test`, nhưng database này phải được tạo và import schema trước:
+
+```bash
+php tests/setup_test_db.php --fresh
+```
+
+Script chỉ thao tác trên database có hậu tố `_test`, tự động từ chối nếu tên database không an toàn. Bỏ `--fresh` để giữ dữ liệu test hiện có.
+
+### 1.2. Unit / integration test (PHP thuần)
+
 ```bash
 php tests/run_tests.php
 ```
 
 Hoặc chạy từng file:
+
 ```bash
 php tests/BookingTest.php
 php tests/PricingRuleTest.php
 ```
 
-### Lưu ý coverage
-Dự án hiện chưa có Composer/PHPUnit. Để có báo cáo coverage chính xác, cài **Xdebug** và chạy:
-```bash
-php -d xdebug.mode=coverage tests/run_tests.php
+Nếu `php` chưa có trong `PATH` (XAMPP trên Windows), dùng đường dẫn đầy đủ, ví dụ:
+
+```powershell
+& "D:\xampp\php\php.exe" tests\setup_test_db.php --fresh
+& "D:\xampp\php\php.exe" tests\run_tests.php
 ```
-Sau đó phân tích file coverage XML/HTML từ Xdebug.
 
-## 2. E2E Test (Playwright)
+Runner tự kiểm tra:
+- Database test có kết nối được không (preflight).
+- Mỗi file con có in đúng một dòng `Kết quả: X passed, Y failed` không.
+- Exit code, STDERR và lỗi fatal/parse error của từng file con.
+- Runner trả exit code khác 0 nếu có test fail hoặc lỗi hạ tầng, không còn trường hợp "0 failed" giả khi file con crash.
 
-Thư mục: `tests/e2e/playwright/`
+#### Chạy chọn lọc
 
-| File | Kịch bản |
-|------|----------|
-| `booking.spec.js` | Đăng ký → Đăng nhập → Xem chi nhánh → Chọn sân → Đặt giờ → Nhập thông tin → Thanh toán tiền mặt → Xem trang thành công |
-| `booking.spec.js` | Kiểm tra trùng giờ đặt sân (double-check) |
-| `booking.spec.js` | Kiểm tra hủy tự động booking pending quá 3 phút |
+Chạy một hoặc vài file:
 
-### Cách chạy
+```bash
+php tests/run_tests.php BookingTest CourtTest
+```
+
+Lọc theo tên test (không phân biệt hoa thường, khớp một phần tên):
+
+```powershell
+$env:TEST_FILTER = "findAvailable"
+php tests/run_tests.php CourtTest
+Remove-Item Env:TEST_FILTER
+```
+
+```cmd
+set TEST_FILTER=findAvailable
+php tests\run_tests.php CourtTest
+set TEST_FILTER=
+```
+
+Các test không khớp bộ lọc hiện `[SKIP]`, vẫn chạy phần setup dữ liệu của file và không tính vào passed/failed. Kết quả cuối có thêm dòng `Tổng skipped` khi đang bật bộ lọc.
+
+### 1.3. E2E Playwright
+
+Yêu cầu: Apache/XAMPP đang chạy app. Mặc định test trỏ tới:
+
+```
+http://localhost/BTL_SmashZone/public
+```
+
+Chạy:
+
 ```bash
 cd tests/e2e/playwright
 npm install
+npx playwright install chromium
 npx playwright test
 ```
 
-Cấu hình `BASE_URL` qua biến môi trường nếu cần:
+Đổi địa chỉ app bằng biến môi trường:
+
 ```bash
 BASE_URL=http://localhost/BTL_SmashZone npx playwright test
 ```
 
-## 3. Báo cáo Coverage (Output lịch sử)
+Chạy chọn lọc E2E:
 
-Chạy toàn bộ unit test qua `tests/run_tests.php` (môi trường XAMPP PHP 8.2, MySQL có dữ liệu mẫu từ `schema.sql`):
-
-**Kết quả đầu ra thực tế:**
-```
-=== SmashZone Test Runner ===
-
->> Chạy BookingTest
---- BookingTest ---
-  [PASS] isSlotAvailable trả về true cho sân không có booking
-  [PASS] generateBookingCode đúng định dạng BB-YYYYMMDD-XXXXX
-  [PASS] generateBookingCode tạo mã duy nhất (không trùng)
-Kết quả: 3 passed, 0 failed
-
->> Chạy PricingRuleTest
---- PricingRuleTest ---
-  [PASS] Pricing weekday off-peak 2 giờ = 160000
-  [PASS] Pricing weekday peak tối 2 giờ = 300000
-  [PASS] Pricing weekend 2 giờ = 360000
-  [PASS] Pricing trả về giá dương
-Kết quả: 4 passed, 0 failed
-
-========================================
-Tổng kết
-========================================
-Tổng passed: 7
-Tổng failed: 0
-Thời gian chạy: ~359ms
-========================================
-```
-
-| Chỉ số | Giá trị |
-|--------|---------|
-| Tổng test case | 9 |
-| Passed | 9 |
-| Failed | 0 |
-| Thời gian chạy | ~307ms |
-
-Chi tiết method đã kiểm thử:
-- `Booking::isSlotAvailable()` — 3 test case (sân trống, trùng giờ/chồng lấn, không chồng lấn sau giờ đặt)
-- `Booking::generateBookingCode()` — 2 test case (định dạng BB-YYYYMMDD-XXXXX + tính duy nhất)
-- `PricingRule::getPrice()` — 4 test case (weekday off-peak, weekday peak, weekend, giá dương)
-
-**Lưu ý quan trọng:** Trong quá trình viết test, phát hiện bug thực tế: `isSlotAvailable` truyền giờ dạng integer (9, 11) vào cột TIME, MySQL chuyển đổi thành '00:00:09' thay vì '09:00:00', khiến kiểm tra trùng giờ không hoạt động. Đã sửa bằng cách format giờ thành 'HH:00:00' trước khi truy vấn (`app/Models/Booking.php`).
-
-**Lưu ý coverage:** Đây là số test case passed, chưa phải phần trăm dòng code được bao phủ. Để có line coverage chính xác, cài **Xdebug** và chạy:
 ```bash
-php -d xdebug.mode=coverage tests/run_tests.php
+npx playwright test --list                      # xem danh sách kịch bản
+npx playwright test -g "đăng nhập"              # lọc theo tên kịch bản
+npx playwright test booking.spec.js:209         # chạy đúng kịch bản tại dòng 209
+npx playwright test --headed                    # mở trình duyệt để xem
+npx playwright test --debug                     # chạy từng bước có debugger
 ```
-Sau đó phân tích file coverage XML/HTML từ Xdebug.
 
-## 4. Quét Bảo mật (OWASP Top 10)
+Lưu ý: E2E tạo tài khoản/booking mới trong database ứng dụng (mỗi lần chạy dùng email, SĐT và ngày tương lai ngẫu nhiên nên có thể chạy lặp lại). Nên chạy trên database dev/disposable, không chạy trên dữ liệu thật.
 
-| STT | Lỗ hổng OWASP | Vị trí trong code | Trạng thái | Hành động khắc phục |
-|-----|--------------|-------------------|------------|---------------------|
-| 1 | **Broken Access Control** | `OwnerController::bookings`, `updateBooking`, `pricing` | Có xử lý `requireBranchAccess` | Kiểm tra lại tất cả route owner |
-| 2 | **Cryptographic Failures** | Mật khẩu bcrypt trong `User::createUser`, `AuthController::login` | Đã hash bcrypt | Kiểm tra `password_verify` đúng chỗ |
-| 3 | **Injection** | Tất cả truy vấn qua PDO prepared statements | Đã dùng prepared statements | Kiểm tra các query động trong `Model::findBy` |
-| 4 | **Insecure Design** | CSRF token trên form POST | Đã xử lý (partial) | `Session::generateCsrfToken()` đã có sẵn; đã thêm vào form `/booking/confirm` và validate trong `processConfirm()`, `process()`, các controller owner |
-| 5 | **Security Misconfiguration** | `.htaccess`, session cookie secure/httponly | Một phần (session đã secure) | Bật `secure` cookie trên HTTPS |
-| 6 | **Identification & Authentication Failures** | Session regeneration sau login | Đã xử lý | Thêm `session_regenerate_id(true)` vào `AuthController::login()` cho cả user và owner |
-| 7 | **Software & Data Integrity Failures** | Không kiểm tra tính toàn vẹn file | Chưa có | Thêm hash kiểm tra nếu cần |
-| 8 | **Logging & Monitoring Failures** | `cron.php` ghi log ra console | Có log cơ bản | Lưu log vào file, theo dõi lỗi |
-| 9 | **SSRF** | Không có | Không phát hiện | - |
-| 10 | **N+1 Query** | `BranchController::show` gọi `Court::findByBranch` riêng | Có rủi low | Gộp query hoặc eager loading |
+## 2. Unit / Integration Test
 
-### N+1 Query trong BookingController
-- `BookingController::create` gọi `Court::findById`, `Branch::findById`, `Booking::getBookedSlots` — 3 query riêng, có thể tối ưu bằng JOIN nếu cần.
-- `OwnerController::dashboard` lặp qua mỗi branch để COUNT bookings → N+1. Cần gộp vào 1 query với GROUP BY.
+| File | Lớp / thành phần | Số test | Kết quả |
+|------|------------------|---------|---------|
+| `tests/BookingTest.php` | `App\Models\Booking` | 21 | 21/21 passed |
+| `tests/PricingRuleTest.php` | `App\Models\PricingRule` | 10 | 10/10 passed |
+| `tests/BranchTest.php` | `App\Models\Branch` | 6 | 6/6 passed |
+| `tests/CourtTest.php` | `App\Models\Court` | 10 | 10/10 passed |
+| `tests/UserTest.php` | `App\Models\User` | 8 | 8/8 passed |
+| `tests/PaymentTest.php` | `App\Models\Payment` | 6 | 6/6 passed |
+| `tests/SessionTest.php` | `Core\Session` (session + CSRF) | 11 | 11/11 passed |
+| `tests/RouterTest.php` | `Core\Router` | 4 | 4/4 passed |
+| **Tổng** | | **76** | **76 passed, 0 failed** |
 
-## 5. Kết luận
-- Unit test: đã viết cho 2 model quan trọng (Booking, PricingRule), tổng 7 test case, 7 passed, 0 failed.
-- E2E: đã viết kịch bản Playwright cho luồng đặt sân chính.
-- Bảo mật: đã xác định 10 mục OWASP, xử lý một phần (prepared statements, bcrypt, CSRF, session_regenerate_id), còn cần kiểm tra lại `Model::findBy()` (tên cột động) và N+1 query trong `OwnerController::dashboard`.
-- N+1: điểm lưu ý trong `OwnerController::dashboard` (lặp COUNT bookings cho mỗi branch).
+### Phạm vi đã kiểm thử
+
+**Booking**
+- `isSlotAvailable`: sân trống; trùng hoàn toàn; chồng lấn một phần; sát trước; sát sau; khác sân; khác ngày.
+- Pending còn hạn khóa slot; pending hết hạn được dọn và không khóa slot.
+- `getBookedSlots` chỉ trả giờ bị khóa bởi booking còn hiệu lực.
+- `cleanExpiredPending` không đụng pending còn hạn/confirmed.
+- `autoExpireEndedSessions` hủy booking confirmed đã qua giờ chơi.
+- `createPending` + `getPendingSecondsRemaining` dùng đồng hồ MySQL, hạn ~3 phút.
+- `generateBookingCode`: đúng định dạng `BB-YYYYMMDD-XXXXX`, không trùng.
+- `getDashboardStats`: đếm booking, doanh thu confirmed, booking confirmed trong ngày.
+
+**PricingRule**
+- Giá weekday off-peak/peak sáng, chiều, tối; weekend Thứ Bảy/Chủ Nhật.
+- Rule riêng của chi nhánh ưu tiên hơn rule toàn hệ thống; chi nhánh khác vẫn dùng giá global.
+- `getForBranch` trả cả rule global và rule riêng.
+
+**Branch**
+- `findActive`, `findByCity`, `getCities`, `getWithCourtsCount`, `search`, `getFeatured`.
+- Chỉ trả chi nhánh/sân `active`; đếm đúng số sân active.
+
+**Court**
+- `findByBranch` chỉ trả sân active.
+- `findAvailable` loại sân bị chiếm bởi confirmed/pending còn hạn, giữ sân có pending hết hạn, đúng biên sát trước/sát sau.
+- `getAvailabilityGrid` đánh dấu đúng giờ bị đặt và bỏ qua pending hết hạn.
+
+**User**
+- `createUser` hash bcrypt, không lưu plaintext; `authenticate` đúng/sai mật khẩu; `findByEmail`/`findByPhone`; ràng buộc email UNIQUE.
+
+**Payment**
+- `createPayment` mặc định `pending`; `findByBooking`; `markAsPaid` cập nhật `status`, `transaction_id`, `paid_at`.
+
+**Session / CSRF**
+- get/set/has/remove; flash dùng một lần; CSRF token 64 hex, ổn định trong session; chấp nhận token đúng, từ chối token sai/rỗng; `csrfField` sinh hidden input.
+
+**Router**
+- Route tĩnh, route động truyền tham số, dấu `/` cuối, ký tự hợp lệ trong tham số.
+
+### Kết quả chạy thực tế
+
+```
+Tổng passed: 76
+Tổng failed: 0
+Lỗi hạ tầng/runner: 0
+Thời gian chạy: ~1.4s
+```
+
+## 3. E2E Test (Playwright)
+
+File: `tests/e2e/playwright/booking.spec.js`  
+Cấu hình: `tests/e2e/playwright/playwright.config.js`
+
+| # | Kịch bản | Kết quả |
+|---|----------|---------|
+| 1 | Đăng ký → chọn chi nhánh/sân → chọn giờ → xác nhận → thanh toán tiền mặt → trang thành công → xem lịch sử theo tài khoản và theo SĐT | Passed |
+| 2 | Chưa đăng nhập POST `/booking/store` → chuyển về `/login` kèm flash lỗi | Passed |
+| 3 | Không cho đặt trùng khung giờ đang chờ thanh toán (slot bị disable + POST trực tiếp bị từ chối) | Passed |
+| 4 | Phân quyền trang thanh toán: khách chưa đăng nhập và người dùng khác đều bị chặn | Passed |
+| 5 | Đăng ký email đã tồn tại bị từ chối | Passed |
+| 6 | Đăng ký số điện thoại không hợp lệ bị từ chối | Passed |
+| 7 | Đăng nhập sai mật khẩu bị từ chối, đăng nhập đúng thành công | Passed |
+| 8 | API `/api/available-slots`: trả đủ 17 khung giờ 05:00–21:00; thiếu `court_id` trả 400 | Passed |
+| 9 | Owner đăng nhập (`admin`/`admin123`) và truy cập dashboard, trang quản lý đặt sân | Passed |
+
+Kết quả chạy thực tế:
+
+```
+Running 9 tests using 1 worker
+9 passed (24.7s)
+```
+
+Selector đã đối chiếu với DOM hiện tại:
+- Chi nhánh: `a[href*="/branch/"]`
+- Sân: `.court-card a[href*="/booking/"]`
+- Khung giờ trống: `.time-slot:not(.disabled)`
+- Thanh toán tiền mặt: `label:has(input[name="payment_method"][value="cash"])`
+
+## 4. Lỗi phát hiện qua kiểm thử và đã sửa
+
+| # | Vị trí | Lỗi | Cách sửa |
+|---|--------|-----|----------|
+| 1 | `app/Models/Booking.php` (lịch sử) | Truyền giờ dạng integer vào cột `TIME`, MySQL hiểu thành `00:00:09`, khiến kiểm tra trùng giờ sai | Format `HH:00:00` trước khi truy vấn |
+| 2 | `app/Models/Court.php` — `findAvailable` | Cùng lỗi format giờ integer → không loại được sân đã bị đặt | Format `HH:00:00`; bổ sung điều kiện bỏ qua pending hết hạn |
+| 3 | `app/Models/Court.php` — `getAvailabilityGrid` | Pending đã hết hạn vẫn chiếm slot | Thêm điều kiện `expires_at > NOW()` cho pending |
+| 4 | `app/Views/bookings/create.php` | `?date=` chỉ dùng để render slot nhưng form luôn gửi ngày hôm nay; đổi ngày không tải lại khung giờ | Dùng `$date` cho input/hidden input/summary; đổi ngày sẽ reload trang với `?date=` |
+| 5 | `tests/run_tests.php` | Bỏ qua exit code; file con fatal vẫn tổng kết `0 failed` và exit 0 | Kiểm tra preflight DB, exit code, STDERR, fatal error và đúng một dòng tổng kết |
+| 6 | `tests/e2e/playwright/booking.spec.js` | Selector cũ `.branch-card`, `.slot.available`, `select[name="payment_method"]`; API `.or()` dùng sai; fixture cố định | Viết lại theo DOM hiện tại, dùng email/SĐT/ngày ngẫu nhiên, bỏ phụ thuộc booking có sẵn |
+
+## 5. Giới hạn hiện tại
+
+- Chưa cài Xdebug nên **chưa có line coverage %**; con số 76 là số test case, không phải % dòng code.
+- E2E chạy trên app + database dev đang cấu hình trong `.env`; chưa tự động trỏ E2E sang `badminton_booking_test`.
+- Chưa có CI (GitHub Actions) chạy test tự động.
+- Owner mới được E2E kiểm tra luồng đăng nhập/dashboard/quản lý đặt sân; chưa E2E CRUD chi nhánh, bảng giá, doanh thu.
+- `Core\Database::query()` hiện `die()` khi query lỗi, nên test không thể kiểm tra một số nhánh lỗi DB ở tầng model.
+
+### Hướng phát triển tiếp
+1. Cài Xdebug, xuất coverage HTML/XML và bổ sung cột coverage theo lớp.
+2. Tách database E2E riêng (ví dụ chạy PHP built-in server với `DB_DATABASE=badminton_booking_test`).
+3. Thêm GitHub Actions: setup PHP + MariaDB, chạy `setup_test_db.php --fresh` và `run_tests.php`.
+4. Bổ sung E2E cho CRUD owner (chi nhánh, bảng giá, doanh thu) và các phương thức thanh toán QR/MoMo.
+
+## 6. Bảo mật (tham chiếu)
+
+Chi tiết OWASP Top 10 nằm trong `docs/OWASP_CHECKLIST.md`. Các điểm đã có kiểm thử hoặc xác minh:
+- CSRF token: `Core\Session` (unit test) + form xác nhận đặt sân/thanh toán.
+- Phân quyền trang thanh toán/đặt sân: E2E test 2 và 4.
+- Mật khẩu bcrypt, email UNIQUE: `tests/UserTest.php`.
+- Prepared statements: kiểm tra qua toàn bộ model khi chạy integration test.

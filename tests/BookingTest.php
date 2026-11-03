@@ -1,6 +1,7 @@
 <?php
 // tests/BookingTest.php
-// Unit test cho Booking model (isSlotAvailable, generateBookingCode, cleanExpiredPending)
+// Integration test cho Booking model: khả dụng khung giờ, mã booking,
+// hết hạn thanh toán và thống kê dashboard.
 
 require_once __DIR__ . '/bootstrap.php';
 
@@ -12,46 +13,186 @@ test_reset();
 echo "--- BookingTest ---\n";
 
 $booking = new Booking();
-
-// Test 1: isSlotAvailable trả về true cho khung giờ trống (giả sử court_id=999 không tồn tại)
-$courtId = 999;
-$date    = '2026-11-05';
-$result  = $booking->isSlotAvailable($courtId, $date, 9, 11);
-test('isSlotAvailable trả về true cho sân không có booking', $result === true);
-
-// Test 4: isSlotAvailable trả về false khi khung giờ đã bị đặt (chồng lấn)
 $db = \Core\Database::getInstance();
-try {
-    $db->query("DELETE FROM bookings WHERE booking_code = 'TEST-CONFLICT-001'");
+
+function booking_insert($db, array $overrides = []): string
+{
+    $data = array_merge([
+        'booking_code'   => 'TEST-' . strtoupper(bin2hex(random_bytes(4))),
+        'user_id'        => null,
+        'customer_name'  => 'Test Fixture',
+        'customer_phone' => '0900000000',
+        'court_id'       => 1,
+        'branch_id'      => 1,
+        'booking_date'   => '2099-11-01',
+        'start_time'     => '09:00:00',
+        'end_time'       => '11:00:00',
+        'duration_hours' => 2,
+        'total_price'    => 300000,
+        'status'         => 'confirmed',
+    ], $overrides);
+
+    $expiresAt = $data['expires_at'] ?? null;
+    unset($data['expires_at']);
+
+    $columns = array_keys($data);
+    $placeholders = array_fill(0, count($columns), '?');
+
+    if ($expiresAt !== null) {
+        $columns[] = 'expires_at';
+        $placeholders[] = $expiresAt;
+    }
+
     $db->query(
-        "INSERT INTO bookings (booking_code, user_id, customer_name, customer_phone, court_id, branch_id, booking_date, start_time, end_time, duration_hours, total_price, status)
-         VALUES ('TEST-CONFLICT-001', NULL, 'Test Conflict', '0900000000', 1, 1, '2026-11-05', '09:00:00', '11:00:00', 2.0, 300000, 'confirmed')"
+        "INSERT INTO bookings (" . implode(', ', $columns) . ")
+         VALUES (" . implode(', ', $placeholders) . ")",
+        array_values($data)
     );
-    $insertOk = true;
-} catch (\Exception $e) {
-    $insertOk = false;
-    echo "  [DEBUG] Insert conflict booking failed: " . $e->getMessage() . "\n";
-}
-if ($insertOk) {
-    $resultConflict = $booking->isSlotAvailable(1, '2026-11-05', 9, 11);
-    test('isSlotAvailable trả về false khi khung giờ đã bị đặt', $resultConflict === false);
-    // Dọn dẹp booking test sau khi kiểm tra
-    $db->query("DELETE FROM bookings WHERE booking_code = 'TEST-CONFLICT-001'");
-} else {
-    test('isSlotAvailable trả về false khi khung giờ đã bị đặt', false);
-    echo "  [DEBUG] Bỏ qua test do không insert được booking conflict\n";
+
+    return $overrides['booking_code'] ?? $data['booking_code'];
 }
 
-// Test 5: isSlotAvailable trả về true khi khung giờ không chồng lấn (sau giờ đã đặt)
-$resultAfter = $booking->isSlotAvailable(1, '2026-11-05', 11, 13);
-test('isSlotAvailable trả về true khi khung giờ không chồng lấn', $resultAfter === true);
-
-// Test pending booking expiry is calculated using the database clock.
-$pendingBookingCode = 'TEST-PENDING-EXP-001';
-$db->query("DELETE FROM bookings WHERE booking_code = ?", [$pendingBookingCode]);
+$cleanupCodes = [];
 try {
+    // ---------- Khả dụng khung giờ: 4 biên chồng lấn + khác sân/ngày ----------
+    $overlapDate = '2099-11-01';
+    $cleanupCodes[] = booking_insert($db, [
+        'booking_code' => 'TEST-OVERLAP-001',
+        'booking_date' => $overlapDate,
+        'start_time'   => '09:00:00',
+        'end_time'     => '11:00:00',
+        'status'       => 'confirmed',
+    ]);
+
+    test('isSlotAvailable trả về true khi sân/ngày không có booking',
+        $booking->isSlotAvailable(1, '2099-11-20', 9, 11) === true);
+
+    test('isSlotAvailable trả về false khi trùng hoàn toàn [9,11) với [9,11)',
+        $booking->isSlotAvailable(1, $overlapDate, 9, 11) === false);
+
+    test('isSlotAvailable trả về false khi chồng lấn một phần [10,12) với [9,11)',
+        $booking->isSlotAvailable(1, $overlapDate, 10, 12) === false);
+
+    test('isSlotAvailable trả về true khi khung mới sát trước [7,9)',
+        $booking->isSlotAvailable(1, $overlapDate, 7, 9) === true);
+
+    test('isSlotAvailable trả về true khi khung mới sát sau [11,13)',
+        $booking->isSlotAvailable(1, $overlapDate, 11, 13) === true);
+
+    test('isSlotAvailable trả về true khi khác sân cùng ngày giờ',
+        $booking->isSlotAvailable(2, $overlapDate, 9, 11) === true);
+
+    test('isSlotAvailable trả về true khi cùng sân nhưng khác ngày',
+        $booking->isSlotAvailable(1, '2099-11-02', 9, 11) === true);
+
+    // ---------- Pending còn hạn chặn slot, pending hết hạn được dọn ----------
+    $cleanupCodes[] = booking_insert($db, [
+        'booking_code' => 'TEST-PENDING-ACTIVE',
+        'booking_date' => '2099-11-03',
+        'start_time'   => '09:00:00',
+        'end_time'     => '11:00:00',
+        'status'       => 'pending',
+        'expires_at'   => 'DATE_ADD(NOW(), INTERVAL 3 MINUTE)',
+    ]);
+    $cleanupCodes[] = booking_insert($db, [
+        'booking_code' => 'TEST-PENDING-EXPIRED',
+        'booking_date' => '2099-11-04',
+        'start_time'   => '09:00:00',
+        'end_time'     => '11:00:00',
+        'status'       => 'pending',
+        'expires_at'   => 'DATE_SUB(NOW(), INTERVAL 1 MINUTE)',
+    ]);
+
+    test('pending còn hạn vẫn khóa khung giờ',
+        $booking->isSlotAvailable(1, '2099-11-03', 9, 11) === false);
+
+    test('pending hết hạn không khóa khung giờ',
+        $booking->isSlotAvailable(1, '2099-11-04', 9, 11) === true);
+
+    $expired = $db->query(
+        "SELECT status FROM bookings WHERE booking_code = 'TEST-PENDING-EXPIRED'"
+    )->fetch(\PDO::FETCH_ASSOC);
+    test('pending hết hạn được chuyển sang cancelled', ($expired['status'] ?? '') === 'cancelled');
+
+    // ---------- getBookedSlots ----------
+    $cleanupCodes[] = booking_insert($db, [
+        'booking_code' => 'TEST-SLOTS-EXPIRED',
+        'booking_date' => '2099-11-05',
+        'start_time'   => '14:00:00',
+        'end_time'     => '16:00:00',
+        'status'       => 'pending',
+        'expires_at'   => 'DATE_SUB(NOW(), INTERVAL 1 MINUTE)',
+    ]);
+    $cleanupCodes[] = booking_insert($db, [
+        'booking_code' => 'TEST-SLOTS-ACTIVE',
+        'booking_date' => '2099-11-05',
+        'start_time'   => '17:00:00',
+        'end_time'     => '19:00:00',
+        'status'       => 'pending',
+        'expires_at'   => 'DATE_ADD(NOW(), INTERVAL 3 MINUTE)',
+    ]);
+
+    $slots = $booking->getBookedSlots(1, '2099-11-05');
+    sort($slots);
+    test('getBookedSlots chỉ trả các giờ bị khóa bởi booking còn hiệu lực',
+        $slots === [17, 18]);
+
+    // ---------- cleanExpiredPending không đụng booking còn hạn/confirmed ----------
+    $cleanupCodes[] = booking_insert($db, [
+        'booking_code' => 'TEST-CLEAN-VALID',
+        'booking_date' => '2099-11-06',
+        'status'       => 'pending',
+        'expires_at'   => 'DATE_ADD(NOW(), INTERVAL 3 MINUTE)',
+    ]);
+    $cleanupCodes[] = booking_insert($db, [
+        'booking_code' => 'TEST-CLEAN-CONFIRMED',
+        'booking_date' => '2099-11-06',
+        'status'       => 'confirmed',
+    ]);
+    $cleanupCodes[] = booking_insert($db, [
+        'booking_code' => 'TEST-CLEAN-EXPIRED',
+        'booking_date' => '2099-11-06',
+        'status'       => 'pending',
+        'expires_at'   => 'DATE_SUB(NOW(), INTERVAL 1 MINUTE)',
+    ]);
+
+    $booking->cleanExpiredPending();
+
+    $statuses = $db->query(
+        "SELECT booking_code, status FROM bookings
+         WHERE booking_code IN ('TEST-CLEAN-VALID', 'TEST-CLEAN-CONFIRMED', 'TEST-CLEAN-EXPIRED')"
+    )->fetchAll(\PDO::FETCH_KEY_PAIR);
+
+    test('cleanExpiredPending giữ nguyên pending còn hạn',
+        ($statuses['TEST-CLEAN-VALID'] ?? '') === 'pending');
+    test('cleanExpiredPending giữ nguyên booking confirmed',
+        ($statuses['TEST-CLEAN-CONFIRMED'] ?? '') === 'confirmed');
+    test('cleanExpiredPending hủy pending quá hạn',
+        ($statuses['TEST-CLEAN-EXPIRED'] ?? '') === 'cancelled');
+
+    // ---------- autoExpireEndedSessions ----------
+    $cleanupCodes[] = booking_insert($db, [
+        'booking_code' => 'TEST-ENDED-SESSION',
+        'booking_date' => date('Y-m-d', strtotime('-1 day')),
+        'start_time'   => '09:00:00',
+        'end_time'     => '11:00:00',
+        'status'       => 'confirmed',
+    ]);
+
+    $booking->autoExpireEndedSessions();
+    $ended = $db->query(
+        "SELECT status FROM bookings WHERE booking_code = 'TEST-ENDED-SESSION'"
+    )->fetch(\PDO::FETCH_ASSOC);
+    test('autoExpireEndedSessions hủy booking confirmed đã qua giờ chơi',
+        ($ended['status'] ?? '') === 'cancelled');
+
+    // ---------- createPending + getPendingSecondsRemaining theo giờ MySQL ----------
+    $pendingCode = 'TEST-PENDING-EXP-001';
+    $cleanupCodes[] = $pendingCode;
+    $db->query("DELETE FROM bookings WHERE booking_code = ?", [$pendingCode]);
+
     $pendingBookingId = $booking->createPending([
-        'booking_code'   => $pendingBookingCode,
+        'booking_code'   => $pendingCode,
         'user_id'        => null,
         'customer_name'  => 'Test Pending Expiry',
         'customer_phone' => '0900000000',
@@ -67,43 +208,62 @@ try {
     ]);
 
     $remainingSeconds = $booking->getPendingSecondsRemaining($pendingBookingId);
-    test('booking mới tạo có thời hạn gần đủ 3 phút theo giờ MySQL', $remainingSeconds >= 175 && $remainingSeconds <= 180);
+    test('booking mới tạo có thời hạn gần đủ 3 phút theo giờ MySQL',
+        $remainingSeconds >= 175 && $remainingSeconds <= 180);
+
+    // ---------- generateBookingCode ----------
+    $code = $booking->generateBookingCode();
+    test('generateBookingCode đúng định dạng BB-YYYYMMDD-XXXXX',
+        preg_match('/^BB-\d{8}-[A-Z0-9]{5}$/', $code) === 1);
+
+    $code2 = $booking->generateBookingCode();
+    test('generateBookingCode tạo mã duy nhất', $code !== $code2);
+
+    // ---------- getDashboardStats gộp theo chi nhánh ----------
+    $before = $booking->getDashboardStats([1, 2]);
+    $beforeBranch1 = $before[1] ?? ['total_bookings' => 0, 'total_revenue' => 0, 'today_bookings' => 0];
+    $beforeBranch2 = $before[2] ?? ['total_bookings' => 0, 'total_revenue' => 0, 'today_bookings' => 0];
+
+    $today = date('Y-m-d');
+    $cleanupCodes[] = booking_insert($db, [
+        'booking_code' => 'TEST-STATS-B1-CONFIRMED',
+        'booking_date' => $today,
+        'status'       => 'confirmed',
+        'total_price'  => 111111,
+    ]);
+    $cleanupCodes[] = booking_insert($db, [
+        'booking_code' => 'TEST-STATS-B1-CANCELLED',
+        'booking_date' => $today,
+        'status'       => 'cancelled',
+        'total_price'  => 222222,
+    ]);
+    $cleanupCodes[] = booking_insert($db, [
+        'booking_code' => 'TEST-STATS-B2-PENDING',
+        'branch_id'    => 2,
+        'booking_date' => $today,
+        'status'       => 'pending',
+        'total_price'  => 333333,
+        'expires_at'   => 'DATE_ADD(NOW(), INTERVAL 3 MINUTE)',
+    ]);
+
+    $after = $booking->getDashboardStats([1, 2]);
+    $afterBranch1 = $after[1] ?? ['total_bookings' => 0, 'total_revenue' => 0, 'today_bookings' => 0];
+    $afterBranch2 = $after[2] ?? ['total_bookings' => 0, 'total_revenue' => 0, 'today_bookings' => 0];
+
+    test('getDashboardStats đếm tổng booking theo chi nhánh',
+        $afterBranch1['total_bookings'] - $beforeBranch1['total_bookings'] === 2
+        && $afterBranch2['total_bookings'] - $beforeBranch2['total_bookings'] === 1);
+
+    test('getDashboardStats chỉ cộng doanh thu booking confirmed',
+        (int) $afterBranch1['total_revenue'] - (int) $beforeBranch1['total_revenue'] === 111111);
+
+    test('getDashboardStats đếm booking confirmed trong ngày',
+        $afterBranch1['today_bookings'] - $beforeBranch1['today_bookings'] === 1);
 } finally {
-    $db->query("DELETE FROM bookings WHERE booking_code = ?", [$pendingBookingCode]);
+    foreach (array_unique($cleanupCodes) as $code) {
+        $db->query("DELETE FROM bookings WHERE booking_code = ?", [$code]);
+    }
 }
-
-// Test expired pending bookings are cancelled and no longer reserve their slots.
-$expiredBookingCode = 'TEST-EXPIRED-001';
-$expiredBookingDate = '2099-12-01';
-$db->query("DELETE FROM bookings WHERE booking_code = ?", [$expiredBookingCode]);
-try {
-    $db->query(
-        "INSERT INTO bookings (booking_code, user_id, customer_name, customer_phone, court_id, branch_id, booking_date, start_time, end_time, duration_hours, total_price, status, expires_at)
-         VALUES (?, NULL, 'Test Expired', '0900000000', 1, 1, ?, '09:00:00', '11:00:00', 2.0, 300000, 'pending', DATE_SUB(NOW(), INTERVAL 1 MINUTE))",
-        [$expiredBookingCode, $expiredBookingDate]
-    );
-
-    $availableAfterExpiry = $booking->isSlotAvailable(1, $expiredBookingDate, 9, 11);
-    $expiredSlots = $booking->getBookedSlots(1, $expiredBookingDate);
-    $expiredBooking = $db->query(
-        "SELECT status FROM bookings WHERE booking_code = ?",
-        [$expiredBookingCode]
-    )->fetch(\PDO::FETCH_ASSOC);
-
-    test('booking pending hết hạn được hủy và không còn khóa khung giờ', $availableAfterExpiry && !in_array(9, $expiredSlots, true));
-    test('trạng thái booking hết hạn được lưu là cancelled', $expiredBooking['status'] === 'cancelled');
-} finally {
-    $db->query("DELETE FROM bookings WHERE booking_code = ?", [$expiredBookingCode]);
-}
-
-// Test 2: generateBookingCode có định dạng BB-YYYYMMDD-XXXXX
-$code = $booking->generateBookingCode();
-$pattern = '/^BB-\d{8}-[A-Z0-9]{5}$/';
-test('generateBookingCode đúng định dạng BB-YYYYMMDD-XXXXX', (bool) preg_match($pattern, $code));
-
-// Test 3: generateBookingCode tạo mã duy nhất nhau nhau
-$code2 = $booking->generateBookingCode();
-test('generateBookingCode tạo mã duy nhất (không trùng)', $code !== $code2);
 
 $r = test_results();
 echo "\nKết quả: {$r['pass']} passed, {$r['fail']} failed\n";
