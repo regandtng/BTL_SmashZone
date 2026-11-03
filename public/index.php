@@ -28,7 +28,10 @@ if (file_exists(ROOT . '/.env')) {
     foreach ($lines as $line) {
         if (strpos(trim($line), '#') === 0) continue;
         list($name, $value) = explode('=', $line, 2);
-        $_ENV[trim($name)] = trim($value);
+        $name = trim($name);
+        if (!isset($_ENV[$name])) {
+            $_ENV[$name] = trim($value);
+        }
     }
 }
 
